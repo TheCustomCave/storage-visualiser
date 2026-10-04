@@ -102,26 +102,30 @@
         </Border>
 
         <!-- Row 2: Navigation Bar (Normal) / Live Scan Status Bar (Scanning) -->
-        <Border Grid.Row="2" Background="#FAFAFA" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="10,5">
-            <Panel>
+        <Border Grid.Row="2" Background="#FAFAFA" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Height="42" Padding="10,0">
+            <Panel VerticalAlignment="Center">
                 <!-- Normal Navigation Bar (Visible when NOT scanning) -->
-                <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*" IsVisible="{Binding !IsScanning}">
+                <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*" IsVisible="{Binding !IsScanning}" VerticalAlignment="Center">
                     <Button Grid.Column="0" Content="◀ Back"
                             Command="{Binding NavigateBackCommand}"
                             IsEnabled="{Binding CanNavigateBack}"
-                            Padding="8,4" Margin="0,0,4,0" />
-                    <Button Grid.Column="1" Content="▶ Fwd"
+                            Width="88" HorizontalContentAlignment="Center"
+                            Padding="0,5" Margin="0,0,6,0" />
+                    <Button Grid.Column="1" Content="▶ Forward"
                             Command="{Binding NavigateForwardCommand}"
                             IsEnabled="{Binding CanNavigateForward}"
-                            Padding="8,4" Margin="0,0,4,0" />
+                            Width="88" HorizontalContentAlignment="Center"
+                            Padding="0,5" Margin="0,0,6,0" />
                     <Button Grid.Column="2" Content="▲ Up"
                             Command="{Binding NavigateUpCommand}"
                             IsEnabled="{Binding CanNavigateUp}"
-                            Padding="8,4" Margin="0,0,4,0" />
+                            Width="65" HorizontalContentAlignment="Center"
+                            Padding="0,5" Margin="0,0,6,0" />
                     <Button Grid.Column="3" Content="⌂ Home"
                             Command="{Binding NavigateHomeCommand}"
                             IsEnabled="{Binding CanNavigateUp}"
-                            Padding="8,4" Margin="0,0,8,0" />
+                            Width="70" HorizontalContentAlignment="Center"
+                            Padding="0,5" Margin="0,0,8,0" />
 
                     <TextBox Grid.Column="4"
                              Text="{Binding CurrentPath, Mode=OneWay}"
@@ -136,15 +140,15 @@
                 </Grid>
 
                 <!-- Full-Width Live Scan Status Bar (Visible ONLY when scanning) -->
-                <Grid ColumnDefinitions="Auto,Auto,Auto,*" IsVisible="{Binding IsScanning}">
+                <Grid ColumnDefinitions="Auto,Auto,Auto,*" IsVisible="{Binding IsScanning}" VerticalAlignment="Center">
                     <Button Grid.Column="0"
                             Content="Cancel Scan"
                             Command="{Binding CancelScanCommand}"
                             Background="#DC2626"
                             Foreground="White"
                             FontWeight="SemiBold"
-                            Padding="10,4"
-                            Margin="0,0,10,0" />
+                            Padding="12,5"
+                            Margin="0,0,12,0" />
 
                     <ProgressBar Grid.Column="1"
                                  IsIndeterminate="True"
@@ -227,7 +231,7 @@
                                     <Border Background="#E5E7EB" CornerRadius="3" Width="100" Height="15" ClipToBounds="True" VerticalAlignment="Center">
                                         <Grid>
                                             <ProgressBar Value="{Binding PercentageOfParent}" Minimum="0" Maximum="100"
-                                                         Foreground="#2563EB" Background="Transparent" BorderThickness="0" Height="15" />
+                                                         Foreground="{Binding ProgressColor}" Background="Transparent" BorderThickness="0" Height="15" />
                                             <TextBlock Text="{Binding FormattedPercentage}"
                                                        FontSize="10" FontWeight="Bold" Foreground="#111827"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center" />

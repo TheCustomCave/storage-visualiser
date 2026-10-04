@@ -41,12 +41,39 @@ public sealed class StorageNode
     private List<StorageNode>? _children;
     public List<StorageNode> Children => _children ??= [];
     public bool HasChildren => _children != null && _children.Count > 0;
-    public IEnumerable<StorageNode> SortedChildren => _children != null ? System.Linq.Enumerable.OrderByDescending(_children, c => c.Size) : [];
+    public static bool ShowFreeSpaceInTree { get; set; } = true;
+
+    public IEnumerable<StorageNode> SortedChildren
+    {
+        get
+        {
+            if (_children == null) return [];
+            var items = ShowFreeSpaceInTree
+                ? (IEnumerable<StorageNode>)_children
+                : System.Linq.Enumerable.Where(_children, c => c.Kind != StorageItemKind.DriveFreeSpace);
+            return System.Linq.Enumerable.OrderByDescending(items, c => c.Size);
+        }
+    }
 
     public string FormattedSize => Formatting.SizeFormatter.Format(Size);
-    public double PercentageOfParent => Parent != null && Parent.Size > 0 ? Math.Clamp((double)Size / Parent.Size * 100.0, 0.0, 100.0) : 100.0;
+
+    public double PercentageOfParent
+    {
+        get
+        {
+            if (Parent == null) return 100.0;
+            if (Kind == StorageItemKind.DriveFreeSpace)
+            {
+                long total = Parent.Size + Size;
+                return total > 0 ? Math.Clamp((double)Size / total * 100.0, 0.0, 100.0) : 0.0;
+            }
+            return Parent.Size > 0 ? Math.Clamp((double)Size / Parent.Size * 100.0, 0.0, 100.0) : 100.0;
+        }
+    }
+
     public string FormattedPercentage => $"{PercentageOfParent:F1}%";
     public string FormattedLastModified => LastModified?.LocalDateTime.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture) ?? "-";
+    public string ProgressColor => Kind == StorageItemKind.DriveFreeSpace ? "#9CA3AF" : "#2563EB";
     public string IconText => Kind switch
     {
         StorageItemKind.Directory => "📁",

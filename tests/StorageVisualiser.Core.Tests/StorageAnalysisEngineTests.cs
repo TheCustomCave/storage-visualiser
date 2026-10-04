@@ -94,4 +94,32 @@ public class StorageAnalysisEngineTests
         child.FormattedSize.ShouldBe("2.44 KB");
         child.FormattedLastModified.ShouldStartWith("2026-10-04");
     }
+
+    [Fact]
+    public void StorageNode_DriveFreeSpace_PercentageCalculatesAgainstTotalCapacity()
+    {
+        var root = new StorageNode { Name = @"C:\", Kind = StorageItemKind.Directory, Size = 500_000 }; // 500 KB used
+        var freeSpace = new StorageNode
+        {
+            Name = "<Free Space>",
+            Kind = StorageItemKind.DriveFreeSpace,
+            Size = 1_500_000 // 1.5 MB free -> Total capacity = 2.0 MB -> 75%
+        };
+        root.AddChild(freeSpace);
+
+        freeSpace.PercentageOfParent.ShouldBe(75.0);
+        freeSpace.FormattedPercentage.ShouldBe("75.0%");
+        freeSpace.ProgressColor.ShouldBe("#9CA3AF");
+
+        // When ShowFreeSpaceInTree is true, SortedChildren includes it
+        StorageNode.ShowFreeSpaceInTree = true;
+        root.SortedChildren.Count().ShouldBe(1);
+
+        // When ShowFreeSpaceInTree is false, SortedChildren filters it out
+        StorageNode.ShowFreeSpaceInTree = false;
+        root.SortedChildren.Count().ShouldBe(0);
+
+        // Restore default
+        StorageNode.ShowFreeSpaceInTree = true;
+    }
 }

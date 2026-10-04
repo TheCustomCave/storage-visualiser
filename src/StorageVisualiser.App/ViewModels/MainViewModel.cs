@@ -142,8 +142,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnShowFreeSpaceChanged(bool value)
     {
+        StorageNode.ShowFreeSpaceInTree = value;
         Options = Options with { ShowFreeSpace = value };
         RecomputeLayout(lastWidth, lastHeight);
+        if (TreeRoots.Count > 0)
+        {
+            var root = TreeRoots[0];
+            TreeRoots = [root];
+        }
+    }
+
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        if (value == 0)
+        {
+            RecomputeLayout(lastWidth, lastHeight);
+        }
     }
 
     partial void OnDetailLevelChanged(int value)
