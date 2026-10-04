@@ -68,6 +68,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private string _selectionDetailText = string.Empty;
 
     [ObservableProperty]
+    private bool _canShowProperties;
+
+    [ObservableProperty]
+    private bool _canOpenFile;
+
+    [ObservableProperty]
     private int _selectedTabIndex;
 
     [ObservableProperty]
@@ -365,11 +371,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public void RecomputeLayout(double width, double height)
     {
-        if (width <= 0 || height <= 0 || CurrentViewNode == null) return;
-        lastWidth = width;
-        lastHeight = height;
+        if (width > 0 && height > 0)
+        {
+            lastWidth = width;
+            lastHeight = height;
+        }
 
-        var bounds = new LayoutRect(0, 0, width, height);
+        if (CurrentViewNode == null || lastWidth <= 0 || lastHeight <= 0) return;
+
+        var bounds = new LayoutRect(0, 0, lastWidth, lastHeight);
         LayoutRoot = _layoutEngine.ComputeLayout(CurrentViewNode, bounds, Options);
     }
 
@@ -419,6 +429,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void SelectNode(StorageNode? node)
     {
         SelectedNode = node;
+        CanShowProperties = node != null && node.Kind != StorageItemKind.OtherGroup;
+        CanOpenFile = node != null && node.Kind != StorageItemKind.OtherGroup && node.Kind != StorageItemKind.DriveFreeSpace;
         UpdateSelectionDetail(node);
     }
 
@@ -443,6 +455,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             SelectionDetailText = $"Free Space: {sizeStr} ({exactStr})";
         }
+        else if (node.Kind == StorageItemKind.OtherGroup)
+        {
+            SelectionDetailText = $"{node.Name}: {sizeStr} ({exactStr}) | {node.FileCount:N0} small files grouped";
+        }
         else
         {
             SelectionDetailText = $"{fullPath} | {sizeStr} ({exactStr}) | Modified: {modified}";
@@ -454,11 +470,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (SelectedNode != null)
         {
-            if (SelectedNode.Kind == StorageItemKind.DriveFreeSpace)
+            if (SelectedNode.Kind == StorageItemKind.DriveFreeSpace || SelectedNode.Kind == StorageItemKind.OtherGroup)
             {
-                // Free space is not a file/folder on disk; open the drive root instead!
-                var driveRoot = SelectedNode.Parent?.GetFullPath() ?? CurrentPath;
-                WindowsShellHelper.OpenInExplorer(driveRoot);
+                // Open the containing folder in Explorer rather than the virtual '<Other>' string
+                var containingFolder = SelectedNode.Parent?.GetFullPath() ?? CurrentPath;
+                WindowsShellHelper.OpenInExplorer(containingFolder);
                 return;
             }
             WindowsShellHelper.OpenInExplorer(SelectedNode.GetFullPath());
@@ -483,6 +499,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (SelectedNode != null)
         {
+            if (SelectedNode.Kind == StorageItemKind.OtherGroup)
+            {
+                // OtherGroup is a virtual aggregator, not an on-disk entity
+                return;
+            }
             if (SelectedNode.Kind == StorageItemKind.DriveFreeSpace)
             {
                 var driveRoot = SelectedNode.Parent?.GetFullPath() ?? CurrentPath;

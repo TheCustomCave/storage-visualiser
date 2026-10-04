@@ -199,10 +199,10 @@
                     <controls:TreemapCanvas.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" />
-                            <MenuItem Header="Open File / Folder" Command="{Binding OpenFileCommand}" />
+                            <MenuItem Header="Open File / Folder" Command="{Binding OpenFileCommand}" IsEnabled="{Binding CanOpenFile}" />
                             <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" />
                             <Separator />
-                            <MenuItem Header="Properties" Command="{Binding ShowPropertiesCommand}" />
+                            <MenuItem Header="Properties" Command="{Binding ShowPropertiesCommand}" IsEnabled="{Binding CanShowProperties}" />
                         </ContextMenu>
                     </controls:TreemapCanvas.ContextMenu>
                 </controls:TreemapCanvas>
@@ -227,13 +227,13 @@
                                     <TextBlock Text="{Binding IconText}" VerticalAlignment="Center" FontSize="13" />
                                     <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#111827" />
 
-                                    <!-- Visual % Bar -->
-                                    <Border Background="#E5E7EB" CornerRadius="3" Width="100" Height="15" ClipToBounds="True" VerticalAlignment="Center">
+                                    <!-- Visual % Bar (WCAG AAA contrast: #0F172A on pastel #93C5FD / #CBD5E1 > 10:1 ratio) -->
+                                    <Border Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="3" Width="100" Height="15" ClipToBounds="True" VerticalAlignment="Center">
                                         <Grid>
                                             <ProgressBar Value="{Binding PercentageOfParent}" Minimum="0" Maximum="100"
                                                          Foreground="{Binding ProgressColor}" Background="Transparent" BorderThickness="0" Height="15" />
                                             <TextBlock Text="{Binding FormattedPercentage}"
-                                                       FontSize="10" FontWeight="Bold" Foreground="#111827"
+                                                       FontSize="10" FontWeight="Bold" Foreground="#0F172A"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Grid>
                                     </Border>
@@ -258,10 +258,10 @@
                                 <MenuItem Header="Show on Map" Command="{Binding ShowSelectedTreeNodeOnMapCommand}" />
                                 <Separator />
                                 <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" />
-                                <MenuItem Header="Open File / Folder" Command="{Binding OpenFileCommand}" />
+                                <MenuItem Header="Open File / Folder" Command="{Binding OpenFileCommand}" IsEnabled="{Binding CanOpenFile}" />
                                 <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" />
                                 <Separator />
-                                <MenuItem Header="Properties" Command="{Binding ShowPropertiesCommand}" />
+                                <MenuItem Header="Properties" Command="{Binding ShowPropertiesCommand}" IsEnabled="{Binding CanShowProperties}" />
                             </ContextMenu>
                         </TreeView.ContextMenu>
                     </TreeView>
@@ -293,12 +293,12 @@
                             <DataGridTemplateColumn Header="% of Total" Width="140" SortMemberPath="PercentageOfTotal">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate x:DataType="analysis:TopFileItem">
-                                        <Border Background="#E5E7EB" CornerRadius="3" Height="15" Margin="6,2" ClipToBounds="True">
+                                        <Border Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="3" Height="15" Margin="6,2" ClipToBounds="True">
                                             <Grid>
                                                 <ProgressBar Value="{Binding PercentageOfTotal}" Minimum="0" Maximum="100"
-                                                             Foreground="#DC2626" Background="Transparent" BorderThickness="0" Height="15" />
+                                                             Foreground="#FCA5A5" Background="Transparent" BorderThickness="0" Height="15" />
                                                 <TextBlock Text="{Binding FormattedPercentage}"
-                                                           FontSize="10" FontWeight="Bold" Foreground="#111827"
+                                                           FontSize="10" FontWeight="Bold" Foreground="#0F172A"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Grid>
                                         </Border>
@@ -314,10 +314,10 @@
                                 <MenuItem Header="Show on Map" Command="{Binding ShowSelectedTopFileOnMapCommand}" />
                                 <Separator />
                                 <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" />
-                                <MenuItem Header="Open File" Command="{Binding OpenFileCommand}" />
+                                <MenuItem Header="Open File" Command="{Binding OpenFileCommand}" IsEnabled="{Binding CanOpenFile}" />
                                 <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" />
                                 <Separator />
-                                <MenuItem Header="Properties" Command="{Binding ShowPropertiesCommand}" />
+                                <MenuItem Header="Properties" Command="{Binding ShowPropertiesCommand}" IsEnabled="{Binding CanShowProperties}" />
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                     </DataGrid>
@@ -349,12 +349,12 @@
                             <DataGridTemplateColumn Header="% of Total" Width="160" SortMemberPath="PercentageOfTotal">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate x:DataType="analysis:FileTypeSummary">
-                                        <Border Background="#E5E7EB" CornerRadius="3" Height="15" Margin="6,2" ClipToBounds="True">
+                                        <Border Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="3" Height="15" Margin="6,2" ClipToBounds="True">
                                             <Grid>
                                                 <ProgressBar Value="{Binding PercentageOfTotal}" Minimum="0" Maximum="100"
-                                                             Foreground="#059669" Background="Transparent" BorderThickness="0" Height="15" />
+                                                             Foreground="#86EFAC" Background="Transparent" BorderThickness="0" Height="15" />
                                                 <TextBlock Text="{Binding FormattedPercentage}"
-                                                           FontSize="10" FontWeight="Bold" Foreground="#111827"
+                                                           FontSize="10" FontWeight="Bold" Foreground="#0F172A"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Grid>
                                         </Border>

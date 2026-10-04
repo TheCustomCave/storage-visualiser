@@ -73,7 +73,7 @@ public sealed class StorageNode
 
     public string FormattedPercentage => $"{PercentageOfParent:F1}%";
     public string FormattedLastModified => LastModified?.LocalDateTime.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture) ?? "-";
-    public string ProgressColor => Kind == StorageItemKind.DriveFreeSpace ? "#9CA3AF" : "#2563EB";
+    public string ProgressColor => Kind == StorageItemKind.DriveFreeSpace ? "#CBD5E1" : "#93C5FD";
     public string IconText => Kind switch
     {
         StorageItemKind.Directory => "📁",

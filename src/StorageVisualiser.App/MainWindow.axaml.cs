@@ -107,7 +107,10 @@ public partial class MainWindow : Window
     {
         if (_vm.SelectedNode != null && Clipboard != null)
         {
-            await Clipboard.SetTextAsync(_vm.SelectedNode.GetFullPath());
+            var path = _vm.SelectedNode.Kind == StorageItemKind.OtherGroup
+                ? (_vm.SelectedNode.Parent?.GetFullPath() ?? _vm.CurrentPath)
+                : _vm.SelectedNode.GetFullPath();
+            await Clipboard.SetTextAsync(path);
         }
     }
 

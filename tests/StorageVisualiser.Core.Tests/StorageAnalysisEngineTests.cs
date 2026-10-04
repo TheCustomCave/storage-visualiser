@@ -109,7 +109,7 @@ public class StorageAnalysisEngineTests
 
         freeSpace.PercentageOfParent.ShouldBe(75.0);
         freeSpace.FormattedPercentage.ShouldBe("75.0%");
-        freeSpace.ProgressColor.ShouldBe("#9CA3AF");
+        freeSpace.ProgressColor.ShouldBe("#CBD5E1");
 
         // When ShowFreeSpaceInTree is true, SortedChildren includes it
         StorageNode.ShowFreeSpaceInTree = true;
