@@ -34,8 +34,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Built-in search filter across scanned nodes, interactive Top Files table, and File Types breakdown.
   - Native AOT compatible JSON serialization via source-generated `ReportJsonContext`.
   - Windows file picker default naming format (`Storage Report - <HOST> - <Target> - <ISO 8601>.html`) defaulting to Documents directory.
+- **Elevated NTFS MFT Scanner (v1 / S8)**:
+  - High-speed direct Master File Table (`$MFT`) parser for local NTFS drive volumes when running with Administrator privileges.
+  - Sequential multi-megabyte cluster run streaming via Win32 volume handle reading, parsing 1024-byte MFT records with fixup validation (Update Sequence Array), resident/non-resident `$DATA` streams, and `$FILE_NAME` attributes.
+  - Seamless `WindowsAutoScanner` orchestrator: automatically selects high-speed MFT direct reading when elevated on local NTFS drives, and seamlessly falls back to standard `DirectoryWalkerScanner` when non-elevated, on network shares, or for subfolder scans.
+  - Real-time active scanner indicator in the status bar (e.g. `Scan complete in 1.4s via NTFS MFT Direct Scanner`).
 - **Unit Tests**:
-  - Comprehensive unit test suite covering `StorageAnalysisEngine` top-files min-heap, extension aggregator, `FileActionService` protected path enforcement and logging, and `HtmlReportExporter` offline compliance and safe encoding (27 tests passing).
+  - Comprehensive unit test suite covering `StorageAnalysisEngine` top-files min-heap, extension aggregator, `FileActionService` protected path enforcement and logging, `HtmlReportExporter` offline compliance, and `NtfsMftScanner` data run decoding, record parsing, and fallback orchestration (33 tests passing).
 - **Standalone Portable Release**:
   - Zero-prerequisite single-file executable for Windows x64 (`StorageVisualiser-win-x64.zip`).
 

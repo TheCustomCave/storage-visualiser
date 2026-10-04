@@ -15,13 +15,14 @@ using StorageVisualiser.Core.Formatting;
 using StorageVisualiser.Core.Model;
 using StorageVisualiser.Core.Scanning;
 using StorageVisualiser.Core.Treemap;
+using StorageVisualiser.Windows.Scanning;
 using StorageVisualiser.Windows.Shell;
 
 namespace StorageVisualiser.App.ViewModels;
 
 public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
-    private readonly DirectoryWalkerScanner _scanner = new();
+    private readonly WindowsAutoScanner _scanner = new();
     private readonly TreemapLayoutEngine _layoutEngine = new();
     private readonly FileActionService _fileActionService;
     private string _lastScanDuration = string.Empty;
@@ -380,7 +381,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 ? $"{stopwatch.Elapsed:mm\\:ss}"
                 : $"{stopwatch.Elapsed.TotalSeconds:F1}s";
             _lastScanDuration = durationStr;
-            StatusText = $"Scan complete in {durationStr}. {root.FileCount:N0} files, {root.DirectoryCount:N0} directories ({SizeFormatter.Format(root.Size)} total).";
+            StatusText = $"Scan complete in {durationStr} via {_scanner.ActiveScannerName}. {root.FileCount:N0} files, {root.DirectoryCount:N0} directories ({SizeFormatter.Format(root.Size)} total).";
         }
         catch (OperationCanceledException)
         {

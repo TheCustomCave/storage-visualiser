@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\StorageVisualiser.Core\StorageVisualiser.Core.csproj" />
+    <ProjectReference Include="..\..\src\StorageVisualiser.Windows\StorageVisualiser.Windows.csproj" />
   </ItemGroup>
 
   <ItemGroup>
