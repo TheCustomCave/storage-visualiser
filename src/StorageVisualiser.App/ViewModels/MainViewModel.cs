@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using StorageVisualiser.App.Models;
+using StorageVisualiser.Core.Analysis;
 using StorageVisualiser.Core.Formatting;
 using StorageVisualiser.Core.Model;
 using StorageVisualiser.Core.Scanning;
@@ -65,6 +66,51 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private string _selectionDetailText = string.Empty;
+
+    [ObservableProperty]
+    private int _selectedTabIndex;
+
+    [ObservableProperty]
+    private ObservableCollection<StorageNode> _treeRoots = [];
+
+    [ObservableProperty]
+    private StorageNode? _selectedTreeNode;
+
+    partial void OnSelectedTreeNodeChanged(StorageNode? value)
+    {
+        if (value != null)
+        {
+            SelectNode(value);
+        }
+    }
+
+    [ObservableProperty]
+    private ObservableCollection<TopFileItem> _topFiles = [];
+
+    [ObservableProperty]
+    private TopFileItem? _selectedTopFile;
+
+    partial void OnSelectedTopFileChanged(TopFileItem? value)
+    {
+        if (value?.Node != null)
+        {
+            SelectNode(value.Node);
+        }
+    }
+
+    [ObservableProperty]
+    private ObservableCollection<FileTypeSummary> _fileTypes = [];
+
+    [ObservableProperty]
+    private FileTypeSummary? _selectedFileType;
+
+    partial void OnSelectedFileTypeChanged(FileTypeSummary? value)
+    {
+        if (value != null)
+        {
+            SelectionDetailText = $"{value.Extension} ({value.Category}): {value.FormattedTotalSize} ({value.TotalSize:N0} bytes) across {value.FormattedFileCount} files ({value.FormattedPercentage} of total)";
+        }
+    }
 
     [ObservableProperty]
     private bool _canNavigateBack;
@@ -251,6 +297,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _forwardStack.Clear();
             UpdateNavigationState();
 
+            TreeRoots = [root];
+            TopFiles = new ObservableCollection<TopFileItem>(StorageAnalysisEngine.GetTopFiles(root, 200));
+            FileTypes = new ObservableCollection<FileTypeSummary>(StorageAnalysisEngine.GetFileTypeBreakdown(root));
+
             SetViewNode(root, saveHistory: false);
             var durationStr = stopwatch.Elapsed.TotalMinutes >= 1
                 ? $"{stopwatch.Elapsed:mm\\:ss}"
@@ -426,6 +476,43 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 return;
             }
             WindowsShellHelper.ShowFileProperties(SelectedNode.GetFullPath());
+        }
+    }
+
+    [RelayCommand]
+    public void ShowSelectedTreeNodeOnMap()
+    {
+        if (SelectedTreeNode != null)
+        {
+            if (SelectedTreeNode.Kind == StorageItemKind.File && SelectedTreeNode.Parent != null)
+            {
+                SetViewNode(SelectedTreeNode.Parent);
+                SelectNode(SelectedTreeNode);
+            }
+            else
+            {
+                SetViewNode(SelectedTreeNode);
+            }
+            SelectedTabIndex = 0;
+        }
+    }
+
+    [RelayCommand]
+    public void ShowSelectedTopFileOnMap()
+    {
+        if (SelectedTopFile?.Node != null)
+        {
+            var node = SelectedTopFile.Node;
+            if (node.Parent != null)
+            {
+                SetViewNode(node.Parent);
+                SelectNode(node);
+            }
+            else
+            {
+                SetViewNode(node);
+            }
+            SelectedTabIndex = 0;
         }
     }
 

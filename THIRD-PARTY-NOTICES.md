@@ -5,7 +5,7 @@ This project incorporates third-party software and components subject to the fol
 ---
 
 ### Avalonia UI
-- **Package**: `Avalonia`, `Avalonia.Desktop`, `Avalonia.Themes.Fluent`, `Avalonia.Fonts.Inter`, `Avalonia.Skia`
+- **Package**: `Avalonia`, `Avalonia.Controls.DataGrid`, `Avalonia.Desktop`, `Avalonia.Themes.Fluent`, `Avalonia.Fonts.Inter`, `Avalonia.Skia`
 - **License**: MIT
 - **Project URL**: https://github.com/AvaloniaUI/Avalonia
 - **Copyright**: (c) AvaloniaUI OÜ

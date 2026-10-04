@@ -110,4 +110,9 @@ public partial class MainWindow : Window
             await Clipboard.SetTextAsync(_vm.SelectedNode.GetFullPath());
         }
     }
+
+    private void OnTopFilesDoubleTapped(object? sender, RoutedEventArgs e)
+    {
+        _vm.OpenInExplorer();
+    }
 }

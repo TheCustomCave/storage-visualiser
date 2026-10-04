@@ -41,6 +41,19 @@ public sealed class StorageNode
     private List<StorageNode>? _children;
     public List<StorageNode> Children => _children ??= [];
     public bool HasChildren => _children != null && _children.Count > 0;
+    public IEnumerable<StorageNode> SortedChildren => _children != null ? System.Linq.Enumerable.OrderByDescending(_children, c => c.Size) : [];
+
+    public string FormattedSize => Formatting.SizeFormatter.Format(Size);
+    public double PercentageOfParent => Parent != null && Parent.Size > 0 ? Math.Clamp((double)Size / Parent.Size * 100.0, 0.0, 100.0) : 100.0;
+    public string FormattedPercentage => $"{PercentageOfParent:F1}%";
+    public string FormattedLastModified => LastModified?.LocalDateTime.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture) ?? "-";
+    public string IconText => Kind switch
+    {
+        StorageItemKind.Directory => "📁",
+        StorageItemKind.DriveFreeSpace => "💾",
+        StorageItemKind.Inaccessible => "🔒",
+        _ => "📄"
+    };
 
     public void AddChild(StorageNode child)
     {

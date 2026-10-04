@@ -2,6 +2,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:StorageVisualiser.App.ViewModels"
         xmlns:controls="using:StorageVisualiser.App.Controls"
+        xmlns:core="using:StorageVisualiser.Core.Model"
+        xmlns:analysis="using:StorageVisualiser.Core.Analysis"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1150" d:DesignHeight="750"
@@ -168,21 +170,199 @@
             </Panel>
         </Border>
 
-        <!-- Treemap Viewport -->
-        <controls:TreemapCanvas x:Name="CanvasControl"
-                                Grid.Row="3"
-                                LayoutRoot="{Binding LayoutRoot}"
-                                SelectedNode="{Binding SelectedNode}">
-            <controls:TreemapCanvas.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" />
-                    <MenuItem Header="Open File / Folder" Command="{Binding OpenFileCommand}" />
-                    <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" />
-                    <Separator />
-                    <MenuItem Header="Properties" Command="{Binding ShowPropertiesCommand}" />
-                </ContextMenu>
-            </controls:TreemapCanvas.ContextMenu>
-        </controls:TreemapCanvas>
+        <!-- Tab Views: Map, Tree, Top Files, File Types -->
+        <TabControl Grid.Row="3"
+                    SelectedIndex="{Binding SelectedTabIndex}"
+                    Margin="0"
+                    Padding="0">
+            <TabControl.Styles>
+                <Style Selector="TabItem">
+                    <Setter Property="FontSize" Value="13" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                    <Setter Property="Padding" Value="14,8" />
+                    <Setter Property="Foreground" Value="#4B5563" />
+                </Style>
+                <Style Selector="TabItem:selected">
+                    <Setter Property="Foreground" Value="#1D4ED8" />
+                </Style>
+            </TabControl.Styles>
+
+            <!-- 1. Map Tab (SpaceMonger Nested Treemap) -->
+            <TabItem Header="🗺️ Map">
+                <controls:TreemapCanvas x:Name="CanvasControl"
+                                        LayoutRoot="{Binding LayoutRoot}"
+                                        SelectedNode="{Binding SelectedNode}">
+                    <controls:TreemapCanvas.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" />
+                            <MenuItem Header="Open File / Folder" Command="{Binding OpenFileCommand}" />
+                            <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" />
+                            <Separator />
+                            <MenuItem Header="Properties" Command="{Binding ShowPropertiesCommand}" />
+                        </ContextMenu>
+                    </controls:TreemapCanvas.ContextMenu>
+                </controls:TreemapCanvas>
+            </TabItem>
+
+            <!-- 2. Tree Tab (RidNacs Style) -->
+            <TabItem Header="🌲 Tree">
+                <Grid RowDefinitions="Auto,*">
+                    <Border Grid.Row="0" Background="#F3F4F6" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="12,6">
+                        <TextBlock Text="Directory Hierarchy (Expand folders to inspect subtrees, sorted by size descending)"
+                                   FontSize="12" Foreground="#4B5563" FontWeight="Medium" />
+                    </Border>
+
+                    <TreeView Grid.Row="1"
+                              ItemsSource="{Binding TreeRoots}"
+                              SelectedItem="{Binding SelectedTreeNode}"
+                              Background="White"
+                              Padding="6,4">
+                        <TreeView.ItemTemplate>
+                            <TreeDataTemplate x:DataType="core:StorageNode" ItemsSource="{Binding SortedChildren}">
+                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,3">
+                                    <TextBlock Text="{Binding IconText}" VerticalAlignment="Center" FontSize="13" />
+                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#111827" />
+
+                                    <!-- Visual % Bar -->
+                                    <Border Background="#E5E7EB" CornerRadius="3" Width="100" Height="15" ClipToBounds="True" VerticalAlignment="Center">
+                                        <Grid>
+                                            <ProgressBar Value="{Binding PercentageOfParent}" Minimum="0" Maximum="100"
+                                                         Foreground="#2563EB" Background="Transparent" BorderThickness="0" Height="15" />
+                                            <TextBlock Text="{Binding FormattedPercentage}"
+                                                       FontSize="10" FontWeight="Bold" Foreground="#111827"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Size -->
+                                    <TextBlock Text="{Binding FormattedSize}" VerticalAlignment="Center"
+                                               FontFamily="Consolas, Segoe UI" FontSize="12" FontWeight="Bold" Foreground="#1E40AF" />
+
+                                    <!-- Sub-items count -->
+                                    <TextBlock Text="{Binding FileCount, StringFormat='({0:N0} files)'}" VerticalAlignment="Center"
+                                               FontSize="11" Foreground="#6B7280"
+                                               IsVisible="{Binding HasChildren}" />
+
+                                    <!-- Modified -->
+                                    <TextBlock Text="{Binding FormattedLastModified, StringFormat='- {0}'}" VerticalAlignment="Center"
+                                               FontSize="11" Foreground="#9CA3AF" />
+                                </StackPanel>
+                            </TreeDataTemplate>
+                        </TreeView.ItemTemplate>
+                        <TreeView.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Show on Map" Command="{Binding ShowSelectedTreeNodeOnMapCommand}" />
+                                <Separator />
+                                <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" />
+                                <MenuItem Header="Open File / Folder" Command="{Binding OpenFileCommand}" />
+                                <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" />
+                                <Separator />
+                                <MenuItem Header="Properties" Command="{Binding ShowPropertiesCommand}" />
+                            </ContextMenu>
+                        </TreeView.ContextMenu>
+                    </TreeView>
+                </Grid>
+            </TabItem>
+
+            <!-- 3. Top Files Tab -->
+            <TabItem Header="📄 Top Files">
+                <Grid RowDefinitions="Auto,*">
+                    <Border Grid.Row="0" Background="#F3F4F6" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="12,6">
+                        <TextBlock Text="Largest 200 Files (Sorted by size descending. Right-click or double-click to reveal in Explorer)"
+                                   FontSize="12" Foreground="#4B5563" FontWeight="Medium" />
+                    </Border>
+
+                    <DataGrid Grid.Row="1"
+                              ItemsSource="{Binding TopFiles}"
+                              SelectedItem="{Binding SelectedTopFile}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserSortColumns="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              BorderThickness="0"
+                              Background="White"
+                              DoubleTapped="OnTopFilesDoubleTapped">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="File Name" x:DataType="analysis:TopFileItem" Binding="{Binding Name}" Width="240" />
+                            <DataGridTextColumn Header="Size" x:DataType="analysis:TopFileItem" Binding="{Binding FormattedSize}" Width="100" />
+                            <DataGridTemplateColumn Header="% of Total" Width="140" SortMemberPath="PercentageOfTotal">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="analysis:TopFileItem">
+                                        <Border Background="#E5E7EB" CornerRadius="3" Height="15" Margin="6,2" ClipToBounds="True">
+                                            <Grid>
+                                                <ProgressBar Value="{Binding PercentageOfTotal}" Minimum="0" Maximum="100"
+                                                             Foreground="#DC2626" Background="Transparent" BorderThickness="0" Height="15" />
+                                                <TextBlock Text="{Binding FormattedPercentage}"
+                                                           FontSize="10" FontWeight="Bold" Foreground="#111827"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Extension" x:DataType="analysis:TopFileItem" Binding="{Binding Extension}" Width="90" />
+                            <DataGridTextColumn Header="Folder Path" x:DataType="analysis:TopFileItem" Binding="{Binding FullPath}" Width="*" />
+                            <DataGridTextColumn Header="Date Modified" x:DataType="analysis:TopFileItem" Binding="{Binding FormattedModified}" Width="140" />
+                        </DataGrid.Columns>
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Show on Map" Command="{Binding ShowSelectedTopFileOnMapCommand}" />
+                                <Separator />
+                                <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" />
+                                <MenuItem Header="Open File" Command="{Binding OpenFileCommand}" />
+                                <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" />
+                                <Separator />
+                                <MenuItem Header="Properties" Command="{Binding ShowPropertiesCommand}" />
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- 4. File Types Tab -->
+            <TabItem Header="📊 File Types">
+                <Grid RowDefinitions="Auto,*">
+                    <Border Grid.Row="0" Background="#F3F4F6" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="12,6">
+                        <TextBlock Text="File Extension &amp; Category Breakdown (Sorted by total storage descending)"
+                                   FontSize="12" Foreground="#4B5563" FontWeight="Medium" />
+                    </Border>
+
+                    <DataGrid Grid.Row="1"
+                              ItemsSource="{Binding FileTypes}"
+                              SelectedItem="{Binding SelectedFileType}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserSortColumns="True"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              BorderThickness="0"
+                              Background="White">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Extension" x:DataType="analysis:FileTypeSummary" Binding="{Binding Extension}" Width="120" />
+                            <DataGridTextColumn Header="Category" x:DataType="analysis:FileTypeSummary" Binding="{Binding Category}" Width="180" />
+                            <DataGridTextColumn Header="Total Size" x:DataType="analysis:FileTypeSummary" Binding="{Binding FormattedTotalSize}" Width="120" />
+                            <DataGridTemplateColumn Header="% of Total" Width="160" SortMemberPath="PercentageOfTotal">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="analysis:FileTypeSummary">
+                                        <Border Background="#E5E7EB" CornerRadius="3" Height="15" Margin="6,2" ClipToBounds="True">
+                                            <Grid>
+                                                <ProgressBar Value="{Binding PercentageOfTotal}" Minimum="0" Maximum="100"
+                                                             Foreground="#059669" Background="Transparent" BorderThickness="0" Height="15" />
+                                                <TextBlock Text="{Binding FormattedPercentage}"
+                                                           FontSize="10" FontWeight="Bold" Foreground="#111827"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="File Count" x:DataType="analysis:FileTypeSummary" Binding="{Binding FormattedFileCount}" Width="120" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+        </TabControl>
 
         <!-- Status Bar -->
         <Border Grid.Row="4" Background="#E5E7EB" BorderBrush="#D1D5DB" BorderThickness="0,1,0,0" Padding="10,5">
