@@ -38,3 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Comprehensive unit test suite covering `StorageAnalysisEngine` top-files min-heap, extension aggregator, `FileActionService` protected path enforcement and logging, and `HtmlReportExporter` offline compliance and safe encoding (27 tests passing).
 - **Standalone Portable Release**:
   - Zero-prerequisite single-file executable for Windows x64 (`StorageVisualiser-win-x64.zip`).
+
+### Fixed
+- **Window Sizing & Spacious Default Layout**: Increased default window dimensions to 1260x800 (minimum 960x540) to prevent toolbar controls from crowding or clipping on high-DPI laptop displays and standard desktop monitors.
+- **Streamlined Toolbar**: Consolidated redundant rescan buttons into a single smart `Rescan` command, polished `Export Report...` button typography, and reduced ComboBox width to guarantee ample breathing room across all screen resolutions.
+- **Top Files DataGrid Headers**: Expanded the `Extension` column width to 115px to prevent header truncation (`Extensic`) and balanced `Size` (110px) and `Date Modified` (150px).
+- **HTML Export Canvas Crispness**: Eliminated text blurriness by rendering on exact integer pixel coordinates, implementing high-DPI canvas scaling (`ctx.scale(dpr, dpr)`), and avoiding canvas `maxWidth` font squashing.
+- **Recursive Bisection Treemap for HTML**: Upgraded HTML canvas treemap layout to recursive bisection, preventing razor-thin slats and bottom clipping.
+- **Interactive Clickable Breadcrumbs**: Transformed HTML export breadcrumb path into clean, clickable navigation segments (`Home › Drive › Subfolder`) and fixed duplicate root breadcrumbs upon header double-click.
+- **Clutter Elimination in Reports**: Fixed exporter `<Other>` grouping threshold to group all sub-threshold items without forcing the first 20 tiny items into microscopic slivers.

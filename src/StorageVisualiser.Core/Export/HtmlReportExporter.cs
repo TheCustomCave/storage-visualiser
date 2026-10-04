@@ -97,9 +97,11 @@ public static class HtmlReportExporter
             dto.Children = new List<ExportNodeDto>();
             // Sort by size descending
             var sorted = node.Children.OrderByDescending(c => c.Size);
+            // Deeper folders require relatively larger fractions to prevent visual clutter
+            var minFraction = currentDepth == 0 ? 0.005 : Math.Max(0.005, 0.015);
+            long minThreshold = (long)(node.Size * minFraction);
             long otherSize = 0;
             int otherCount = 0;
-            long minThreshold = (long)(node.Size * 0.005); // 0.5% threshold for tree
 
             foreach (var child in sorted)
             {
@@ -114,7 +116,7 @@ public static class HtmlReportExporter
                     continue;
                 }
 
-                if (child.Size >= minThreshold || dto.Children.Count < 20)
+                if (child.Size >= minThreshold)
                 {
                     dto.Children.Add(BuildExportTree(child, maxDepth, currentDepth + 1));
                 }
@@ -270,23 +272,52 @@ body {
 }
 .btn:hover { background: #E2E8F0; }
 .breadcrumbs {
-  font-family: Consolas, monospace;
-  font-size: 0.825rem;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow-x: auto;
+  white-space: nowrap;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
   color: #334155;
   background: #F8FAFC;
   border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 5px 10px;
+  border-radius: 5px;
+  padding: 5px 12px;
   flex: 1;
+}
+.crumb {
+  cursor: pointer;
+  color: var(--accent);
+  border-radius: 3px;
+  padding: 2px 5px;
+  text-decoration: none;
+}
+.crumb:hover {
+  background: #E2E8F0;
+  text-decoration: underline;
+}
+.crumb.active {
+  cursor: default;
+  color: var(--text);
+  font-weight: 600;
+  background: transparent;
+  text-decoration: none;
+}
+.crumb-sep {
+  color: #94A3B8;
+  user-select: none;
 }
 
 #treemap-canvas {
   width: 100%;
-  height: 620px;
+  height: 640px;
   background: #FFFFFF;
   border: 1px solid var(--border);
   border-radius: 6px;
   display: block;
+  box-sizing: border-box;
 }
 
 .status-bar {
@@ -531,25 +562,80 @@ function switchTab(tabId) {
   }
 }
 
+function drawCrispText(ctx, text, x, y, maxW, isBold, fontSize) {
+  if (maxW < 14 || !text) return;
+  ctx.save();
+  ctx.font = `${isBold ? '600 ' : '400 '}${fontSize}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  ctx.textBaseline = 'top';
+
+  let display = text;
+  if (ctx.measureText(display).width > maxW) {
+    let len = display.length;
+    while (len > 2 && ctx.measureText(display.slice(0, len) + '…').width > maxW) {
+      len--;
+    }
+    display = len > 2 ? display.slice(0, len) + '…' : '';
+  }
+
+  if (display) {
+    ctx.fillText(display, Math.round(x), Math.round(y));
+  }
+  ctx.restore();
+}
+
 function renderTreemap() {
   const canvas = document.getElementById('treemap-canvas');
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
+  const width = Math.floor(rect.width);
+  const height = Math.floor(rect.height);
+  if (width <= 0 || height <= 0) return;
+
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
   const ctx = canvas.getContext('2d');
+  ctx.resetTransform();
   ctx.scale(dpr, dpr);
 
   currentBoxes = [];
-  document.getElementById('breadcrumbs').innerText = getBreadcrumbsText();
+  renderBreadcrumbs();
 
-  layoutNode(ctx, currentNode, 0, 0, rect.width, rect.height, 0);
+  layoutNode(ctx, currentNode, 0, 0, width, height, 0);
 }
 
-function getBreadcrumbsText() {
-  const parts = navHistory.map(n => n.n);
-  parts.push(currentNode.n);
-  return parts.join(' \\ ');
+function renderBreadcrumbs() {
+  const container = document.getElementById('breadcrumbs');
+  container.innerHTML = '';
+
+  const crumbs = [];
+  for (let i = 0; i < navHistory.length; i++) {
+    crumbs.push({ name: navHistory[i].n, node: navHistory[i], index: i });
+  }
+  crumbs.push({ name: currentNode.n, node: currentNode, index: -1 });
+
+  for (let i = 0; i < crumbs.length; i++) {
+    const c = crumbs[i];
+    const isLast = i === crumbs.length - 1;
+    const span = document.createElement('span');
+    span.className = isLast ? 'crumb active' : 'crumb';
+    span.textContent = c.name;
+    if (!isLast) {
+      span.onclick = () => {
+        const target = navHistory[c.index];
+        navHistory.length = c.index;
+        currentNode = target;
+        renderTreemap();
+      };
+    }
+    container.appendChild(span);
+
+    if (!isLast) {
+      const sep = document.createElement('span');
+      sep.className = 'crumb-sep';
+      sep.textContent = ' › ';
+      container.appendChild(sep);
+    }
+  }
 }
 
 function navigateUp() {
@@ -574,11 +660,16 @@ function layoutNode(ctx, node, x, y, w, h, depth) {
   const isFree = node.k === 2;
   const isOther = node.k === 4;
 
-  if (!isDir || !node.c || node.c.length === 0 || depth >= 5) {
+  const rx = Math.round(x);
+  const ry = Math.round(y);
+  const rw = Math.round(w);
+  const rh = Math.round(h);
+
+  if (!isDir || !node.c || node.c.length === 0 || depth >= 5 || rh < 28 || rw < 32) {
     // Leaf item
-    currentBoxes.push({ node, x, y, w, h, depth });
+    currentBoxes.push({ node, x: rx, y: ry, w: rw, h: rh, depth });
     ctx.lineWidth = 1;
-    ctx.strokeStyle = '#222222';
+    ctx.strokeStyle = '#334155';
 
     if (isFree) {
       ctx.fillStyle = freeSpaceColor;
@@ -590,80 +681,93 @@ function layoutNode(ctx, node, x, y, w, h, depth) {
       ctx.fillStyle = fileColor;
     }
 
-    ctx.fillRect(x, y, w, h);
-    ctx.strokeRect(x, y, w, h);
+    ctx.fillRect(rx, ry, rw, rh);
+    ctx.strokeRect(rx + 0.5, ry + 0.5, rw - 1, rh - 1);
 
-    if (w >= 30 && h >= 14) {
-      ctx.fillStyle = '#111111';
-      ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-      ctx.fillText(node.n, x + 3, y + 11, w - 6);
+    if (rw >= 24 && rh >= 14) {
+      ctx.fillStyle = '#0F172A';
+      drawCrispText(ctx, node.n, rx + 4, ry + 3, rw - 8, false, 11);
     }
     return;
   }
 
   // Directory container with header
-  currentBoxes.push({ node, x, y, w, h, depth });
+  currentBoxes.push({ node, x: rx, y: ry, w: rw, h: rh, depth });
   const theme = palette[depth % palette.length];
-  const headerHeight = Math.min(18, Math.max(12, h * 0.15));
+  const headerHeight = Math.min(20, Math.max(16, Math.floor(rh * 0.12)));
 
   // Draw Header
   ctx.fillStyle = theme.h;
-  ctx.fillRect(x, y, w, headerHeight);
-  ctx.strokeStyle = '#222222';
-  ctx.strokeRect(x, y, w, headerHeight);
+  ctx.fillRect(rx, ry, rw, headerHeight);
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(rx + 0.5, ry + 0.5, rw - 1, headerHeight);
 
-  if (w >= 20 && headerHeight >= 10) {
-    ctx.fillStyle = '#111111';
-    ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillText(`${node.n} (${formatBytes(node.s)})`, x + 4, y + headerHeight - 4, w - 8);
+  if (rw >= 24 && headerHeight >= 12) {
+    ctx.fillStyle = '#0F172A';
+    drawCrispText(ctx, `${node.n} (${formatBytes(node.s)})`, rx + 4, ry + 3, rw - 8, true, 11);
   }
 
-  // Children area
-  const cx = x + 1;
-  const cy = y + headerHeight + 1;
-  const cw = w - 2;
-  const ch = h - headerHeight - 2;
+  // Container outer border
+  ctx.strokeRect(rx + 0.5, ry + 0.5, rw - 1, rh - 1);
+
+  // Children area (inside header and padding)
+  const pad = 1;
+  const cx = rx + pad;
+  const cy = ry + headerHeight + pad;
+  const cw = rw - pad * 2;
+  const ch = rh - headerHeight - pad * 2;
 
   if (cw <= 4 || ch <= 4) return;
 
-  // Squarified layout subdivision
   layoutChildren(ctx, node.c, cx, cy, cw, ch, depth + 1);
 }
 
 function layoutChildren(ctx, children, x, y, w, h, depth) {
+  if (w <= 4 || h <= 4 || !children || children.length === 0) return;
+
   const total = children.reduce((acc, c) => acc + Math.max(0, c.s), 0);
   if (total <= 0) return;
 
-  let remainingX = x;
-  let remainingY = y;
-  let remainingW = w;
-  let remainingH = h;
-  let remainingTotal = total;
+  const sorted = children.slice().sort((a, b) => b.s - a.s);
+  subdivide(sorted, x, y, w, h, depth);
 
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i];
-    const fraction = Math.max(0, child.s) / remainingTotal;
-    const isHorizontal = remainingW >= remainingH;
+  function subdivide(items, bx, by, bw, bh, d) {
+    if (items.length === 0 || bw <= 2 || bh <= 2) return;
 
-    if (i === children.length - 1) {
-      layoutNode(ctx, child, remainingX, remainingY, remainingW, remainingH, depth);
-      break;
+    if (items.length === 1) {
+      layoutNode(ctx, items[0], Math.round(bx), Math.round(by), Math.round(bw), Math.round(bh), d);
+      return;
     }
 
-    if (isHorizontal) {
-      const itemW = Math.max(1, remainingW * fraction);
-      layoutNode(ctx, child, remainingX, remainingY, itemW, remainingH, depth);
-      remainingX += itemW;
-      remainingW = Math.max(0, remainingW - itemW);
+    const curTotal = items.reduce((sum, item) => sum + Math.max(0, item.s), 0);
+    if (curTotal <= 0) return;
+
+    let half = curTotal / 2;
+    let acc = 0;
+    let splitIdx = 1;
+    for (let i = 0; i < items.length - 1; i++) {
+      acc += Math.max(0, items[i].s);
+      if (acc >= half) {
+        splitIdx = i + 1;
+        break;
+      }
+    }
+
+    const left = items.slice(0, splitIdx);
+    const right = items.slice(splitIdx);
+    const leftSum = left.reduce((s, it) => s + Math.max(0, it.s), 0);
+    const fraction = curTotal > 0 ? leftSum / curTotal : 0.5;
+
+    if (bw >= bh) {
+      const splitW = Math.max(1, Math.min(bw - 1, Math.round(bw * fraction)));
+      subdivide(left, bx, by, splitW, bh, d);
+      subdivide(right, bx + splitW, by, bw - splitW, bh, d);
     } else {
-      const itemH = Math.max(1, remainingH * fraction);
-      layoutNode(ctx, child, remainingX, remainingY, remainingW, itemH, depth);
-      remainingY += itemH;
-      remainingH = Math.max(0, remainingH - itemH);
+      const splitH = Math.max(1, Math.min(bh - 1, Math.round(bh * fraction)));
+      subdivide(left, bx, by, bw, splitH, d);
+      subdivide(right, bx, by + splitH, bw, bh - splitH, d);
     }
-
-    remainingTotal = Math.max(1, remainingTotal - child.s);
-    if (remainingW <= 2 || remainingH <= 2) break;
   }
 }
 
@@ -697,7 +801,7 @@ canvas.addEventListener('dblclick', e => {
   for (let i = currentBoxes.length - 1; i >= 0; i--) {
     const b = currentBoxes[i];
     if (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h) {
-      if (b.node.k === 1 && b.node.c && b.node.c.length > 0) {
+      if (b.node.k === 1 && b.node.c && b.node.c.length > 0 && b.node !== currentNode) {
         navHistory.push(currentNode);
         currentNode = b.node;
         renderTreemap();

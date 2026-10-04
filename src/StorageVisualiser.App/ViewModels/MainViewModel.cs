@@ -290,6 +290,23 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         NetworkPathToScan = string.Empty;
     }
 
+    [RelayCommand]
+    public async Task Rescan()
+    {
+        if (IsScanning) return;
+
+        if (RootNode != null)
+        {
+            var rootPath = RootNode.GetFullPath();
+            var isDrive = SelectedDrive != null && rootPath.Equals(SelectedDrive.Name, StringComparison.OrdinalIgnoreCase);
+            await StartScanPathAsync(rootPath, isDriveRoot: isDrive);
+        }
+        else if (SelectedDrive != null)
+        {
+            await StartDriveScanAsync();
+        }
+    }
+
     public async Task StartScanPathAsync(string path, bool isDriveRoot)
     {
         if (IsScanning)

@@ -38,7 +38,7 @@ public partial class MainWindow : Window
         Program.Log($"MainWindow.OnOpened handle={handle}");
         if (handle != 0)
         {
-            WindowsShellHelper.EnsureWindowVisible(handle, 1100, 700);
+            WindowsShellHelper.EnsureWindowVisible(handle, 1260, 800);
             Program.Log("MainWindow.OnOpened EnsureWindowVisible finished");
         }
     }

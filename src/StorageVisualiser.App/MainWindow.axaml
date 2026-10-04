@@ -6,12 +6,12 @@
         xmlns:analysis="using:StorageVisualiser.Core.Analysis"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="1150" d:DesignHeight="750"
+        mc:Ignorable="d" d:DesignWidth="1260" d:DesignHeight="800"
         x:Class="StorageVisualiser.App.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Storage Visualiser"
-        Width="1150" Height="750"
-        MinWidth="650" MinHeight="420"
+        Width="1260" Height="800"
+        MinWidth="960" MinHeight="540"
         WindowStartupLocation="CenterScreen"
         WindowState="Normal"
         ShowInTaskbar="True">
@@ -22,14 +22,14 @@
 
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
         <!-- Top Toolbar -->
-        <Border Grid.Row="0" Background="#F3F4F6" BorderBrush="#D1D5DB" BorderThickness="0,0,0,1" Padding="10,6">
+        <Border Grid.Row="0" Background="#F3F4F6" BorderBrush="#D1D5DB" BorderThickness="0,0,0,1" Padding="12,6">
             <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
-                <!-- Drive Selector -->
+                <!-- Drive Selector & Scan -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <TextBlock Text="Drive:" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13" Foreground="#1F2937" />
                     <ComboBox ItemsSource="{Binding Drives}"
                               SelectedItem="{Binding SelectedDrive}"
-                              Width="260"
+                              Width="230"
                               Background="White"
                               Foreground="#111111"
                               BorderBrush="#D1D5DB"
@@ -49,26 +49,25 @@
 
                 <!-- Folder & Rescan Buttons -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="10,0,0,0" VerticalAlignment="Center">
-                    <Button Content="Browse Folder..."
+                    <Button Content="Browse..."
                             Click="OnBrowseFolderClicked"
                             IsEnabled="{Binding !IsScanning}"
-                            Padding="10,5" />
-                    <Button Content="Rescan Folder"
-                            Click="OnRescanFolderClicked"
+                            Padding="10,5"
+                            ToolTip.Tip="Browse and scan a folder" />
+                    <Button Content="Rescan"
+                            Command="{Binding RescanCommand}"
                             IsEnabled="{Binding !IsScanning}"
-                            Padding="10,5" />
-                    <Button Content="Rescan Drive"
-                            Command="{Binding StartDriveScanCommand}"
-                            IsEnabled="{Binding !IsScanning}"
-                            Padding="10,5" />
+                            Padding="10,5"
+                            ToolTip.Tip="Rescan the current drive or folder" />
                 </StackPanel>
 
                 <!-- Export Report Button -->
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-                    <Button Content="📊 Export Report..."
+                    <Button Content="Export Report..."
                             Click="OnExportReportClicked"
                             IsEnabled="{Binding CanExport}"
-                            Padding="10,5"
+                            Padding="11,5"
+                            FontWeight="Medium"
                             ToolTip.Tip="Export an interactive, self-contained HTML storage report" />
                 </StackPanel>
 
@@ -85,7 +84,7 @@
                     <TextBlock Text="Detail:" VerticalAlignment="Center" FontSize="12" FontWeight="Medium" Foreground="#374151" />
                     <Slider Minimum="1" Maximum="5"
                             Value="{Binding DetailLevel}"
-                            Width="90"
+                            Width="85"
                             IsSnapToTickEnabled="True"
                             TickFrequency="1"
                             VerticalAlignment="Center"
@@ -307,8 +306,8 @@
                               Background="White"
                               DoubleTapped="OnTopFilesDoubleTapped">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="File Name" x:DataType="analysis:TopFileItem" Binding="{Binding Name}" Width="240" />
-                            <DataGridTextColumn Header="Size" x:DataType="analysis:TopFileItem" Binding="{Binding FormattedSize}" Width="100" />
+                            <DataGridTextColumn Header="File Name" x:DataType="analysis:TopFileItem" Binding="{Binding Name}" Width="250" />
+                            <DataGridTextColumn Header="Size" x:DataType="analysis:TopFileItem" Binding="{Binding FormattedSize}" Width="110" />
                             <DataGridTemplateColumn Header="% of Total" Width="140" SortMemberPath="PercentageOfTotal">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate x:DataType="analysis:TopFileItem">
@@ -324,9 +323,9 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Extension" x:DataType="analysis:TopFileItem" Binding="{Binding Extension}" Width="90" />
+                            <DataGridTextColumn Header="Extension" x:DataType="analysis:TopFileItem" Binding="{Binding Extension}" Width="115" />
                             <DataGridTextColumn Header="Folder Path" x:DataType="analysis:TopFileItem" Binding="{Binding FullPath}" Width="*" />
-                            <DataGridTextColumn Header="Date Modified" x:DataType="analysis:TopFileItem" Binding="{Binding FormattedModified}" Width="140" />
+                            <DataGridTextColumn Header="Date Modified" x:DataType="analysis:TopFileItem" Binding="{Binding FormattedModified}" Width="150" />
                         </DataGrid.Columns>
                         <DataGrid.ContextMenu>
                             <ContextMenu>
