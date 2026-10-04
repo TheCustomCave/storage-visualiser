@@ -7,10 +7,12 @@
         mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
         x:Class="StorageVisualiser.App.MainWindow"
         x:DataType="vm:MainViewModel"
-        Icon="/app.manifest"
         Title="Storage Visualiser"
         Width="1100" Height="700"
-        MinWidth="600" MinHeight="400">
+        MinWidth="600" MinHeight="400"
+        WindowStartupLocation="CenterScreen"
+        WindowState="Normal"
+        ShowInTaskbar="True">
 
     <Grid RowDefinitions="Auto,Auto,*,Auto">
         <!-- Top Toolbar -->
