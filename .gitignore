@@ -21,3 +21,4 @@ secrets.json
 settings.json
 *.svsnap
 logs/
+*.log
