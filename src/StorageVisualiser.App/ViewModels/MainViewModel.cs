@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using StorageVisualiser.App.Models;
+using StorageVisualiser.Core.Actions;
 using StorageVisualiser.Core.Analysis;
 using StorageVisualiser.Core.Formatting;
 using StorageVisualiser.Core.Model;
@@ -21,6 +22,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly DirectoryWalkerScanner _scanner = new();
     private readonly TreemapLayoutEngine _layoutEngine = new();
+    private readonly FileActionService _fileActionService;
     private CancellationTokenSource? _scanCts;
 
     [ObservableProperty]
@@ -72,6 +74,33 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private bool _canOpenFile;
+
+    [ObservableProperty]
+    private bool _canDelete;
+
+    [ObservableProperty]
+    private bool _isDeleteConfirmationVisible;
+
+    [ObservableProperty]
+    private StorageNode? _pendingDeleteNode;
+
+    [ObservableProperty]
+    private string _pendingDeleteTitle = string.Empty;
+
+    [ObservableProperty]
+    private string _pendingDeleteItemName = string.Empty;
+
+    [ObservableProperty]
+    private string _pendingDeletePath = string.Empty;
+
+    [ObservableProperty]
+    private string _pendingDeleteSize = string.Empty;
+
+    [ObservableProperty]
+    private bool _isDeleteBlocked;
+
+    [ObservableProperty]
+    private string _deleteBlockedReason = string.Empty;
 
     [ObservableProperty]
     private int _selectedTabIndex;
@@ -182,6 +211,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public MainViewModel()
     {
+        var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "file_actions.log");
+        _fileActionService = new FileActionService(new WindowsRecycleBinProvider(), logFilePath: logPath);
         RefreshDrives();
     }
 
@@ -431,6 +462,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         SelectedNode = node;
         CanShowProperties = node != null && node.Kind != StorageItemKind.OtherGroup;
         CanOpenFile = node != null && node.Kind != StorageItemKind.OtherGroup && node.Kind != StorageItemKind.DriveFreeSpace;
+        CanDelete = node != null && node.Parent != null && node.Kind != StorageItemKind.DriveFreeSpace && node.Kind != StorageItemKind.OtherGroup && node.Kind != StorageItemKind.Inaccessible;
         UpdateSelectionDetail(node);
     }
 
@@ -549,6 +581,114 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             }
             SelectedTabIndex = 0;
         }
+    }
+
+    [RelayCommand]
+    public void RequestDelete()
+    {
+        if (SelectedNode == null) return;
+
+        PendingDeleteNode = SelectedNode;
+        PendingDeleteItemName = SelectedNode.Name;
+        PendingDeletePath = SelectedNode.GetFullPath();
+        PendingDeleteSize = $"{SizeFormatter.Format(SelectedNode.Size)} ({SizeFormatter.Format(SelectedNode.Size, exact: true)})";
+
+        if (!_fileActionService.CanDelete(SelectedNode, out var reason))
+        {
+            IsDeleteBlocked = true;
+            DeleteBlockedReason = reason;
+            PendingDeleteTitle = "Protected Item - Deletion Blocked";
+        }
+        else
+        {
+            IsDeleteBlocked = false;
+            DeleteBlockedReason = string.Empty;
+            PendingDeleteTitle = SelectedNode.Kind == StorageItemKind.Directory
+                ? "Move Directory to Recycle Bin?"
+                : "Move File to Recycle Bin?";
+        }
+
+        IsDeleteConfirmationVisible = true;
+    }
+
+    [RelayCommand]
+    public void CancelDelete()
+    {
+        IsDeleteConfirmationVisible = false;
+        PendingDeleteNode = null;
+    }
+
+    [RelayCommand]
+    public void ConfirmDelete()
+    {
+        if (PendingDeleteNode == null || IsDeleteBlocked)
+        {
+            IsDeleteConfirmationVisible = false;
+            return;
+        }
+
+        var nodeToDelete = PendingDeleteNode;
+        IsDeleteConfirmationVisible = false;
+
+        var result = _fileActionService.DeleteToRecycleBin(nodeToDelete);
+        if (result.Success)
+        {
+            StatusText = $"Moved '{nodeToDelete.Name}' ({SizeFormatter.Format(nodeToDelete.Size)}) to Recycle Bin.";
+
+            // Remove from parent in memory
+            var parent = nodeToDelete.Parent;
+            if (parent != null)
+            {
+                parent.Children.Remove(nodeToDelete);
+
+                // Deduct size up the ancestor tree
+                var current = parent;
+                while (current != null)
+                {
+                    current.Size = Math.Max(0, current.Size - nodeToDelete.Size);
+                    if (nodeToDelete.Kind == StorageItemKind.Directory)
+                    {
+                        current.DirectoryCount = Math.Max(0, current.DirectoryCount - 1 - nodeToDelete.DirectoryCount);
+                        current.FileCount = Math.Max(0, current.FileCount - nodeToDelete.FileCount);
+                    }
+                    else
+                    {
+                        current.FileCount = Math.Max(0, current.FileCount - 1);
+                    }
+                    current = current.Parent;
+                }
+
+                // Refresh views
+                if (CurrentViewNode == nodeToDelete)
+                {
+                    SetViewNode(parent);
+                }
+                else
+                {
+                    RecomputeLayout(lastWidth, lastHeight);
+                }
+
+                // Refresh tree
+                if (TreeRoots.Count > 0)
+                {
+                    var r = TreeRoots[0];
+                    TreeRoots = [r];
+                }
+
+                // Remove from TopFiles if present
+                var topMatch = System.Linq.Enumerable.FirstOrDefault(TopFiles, t => t.Node == nodeToDelete);
+                if (topMatch != null)
+                {
+                    TopFiles.Remove(topMatch);
+                }
+            }
+        }
+        else
+        {
+            StatusText = $"Failed to move '{nodeToDelete.Name}' to Recycle Bin: {result.ErrorMessage}";
+        }
+
+        PendingDeleteNode = null;
     }
 
     public void Dispose()

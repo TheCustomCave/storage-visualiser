@@ -16,6 +16,10 @@
         WindowState="Normal"
         ShowInTaskbar="True">
 
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Delete" Command="{Binding RequestDeleteCommand}" />
+    </Window.KeyBindings>
+
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
         <!-- Top Toolbar -->
         <Border Grid.Row="0" Background="#F3F4F6" BorderBrush="#D1D5DB" BorderThickness="0,0,0,1" Padding="10,6">
@@ -131,12 +135,14 @@
                              Text="{Binding CurrentPath, Mode=OneWay}"
                              IsReadOnly="True"
                              VerticalAlignment="Center"
+                             VerticalContentAlignment="Center"
+                             Height="30"
                              Background="White"
                              Foreground="#111111"
                              BorderBrush="#D1D5DB"
                              FontFamily="Consolas, Segoe UI"
                              FontSize="12"
-                             Padding="6,4" />
+                             Padding="8,0" />
                 </Grid>
 
                 <!-- Full-Width Live Scan Status Bar (Visible ONLY when scanning) -->
@@ -202,6 +208,8 @@
                             <MenuItem Header="Open File / Folder" Command="{Binding OpenFileCommand}" IsEnabled="{Binding CanOpenFile}" />
                             <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" />
                             <Separator />
+                            <MenuItem Header="Delete to Recycle Bin..." Command="{Binding RequestDeleteCommand}" IsEnabled="{Binding CanDelete}" InputGesture="Delete" />
+                            <Separator />
                             <MenuItem Header="Properties" Command="{Binding ShowPropertiesCommand}" IsEnabled="{Binding CanShowProperties}" />
                         </ContextMenu>
                     </controls:TreemapCanvas.ContextMenu>
@@ -261,6 +269,8 @@
                                 <MenuItem Header="Open File / Folder" Command="{Binding OpenFileCommand}" IsEnabled="{Binding CanOpenFile}" />
                                 <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" />
                                 <Separator />
+                                <MenuItem Header="Delete to Recycle Bin..." Command="{Binding RequestDeleteCommand}" IsEnabled="{Binding CanDelete}" InputGesture="Delete" />
+                                <Separator />
                                 <MenuItem Header="Properties" Command="{Binding ShowPropertiesCommand}" IsEnabled="{Binding CanShowProperties}" />
                             </ContextMenu>
                         </TreeView.ContextMenu>
@@ -316,6 +326,8 @@
                                 <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" />
                                 <MenuItem Header="Open File" Command="{Binding OpenFileCommand}" IsEnabled="{Binding CanOpenFile}" />
                                 <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" />
+                                <Separator />
+                                <MenuItem Header="Delete to Recycle Bin..." Command="{Binding RequestDeleteCommand}" IsEnabled="{Binding CanDelete}" InputGesture="Delete" />
                                 <Separator />
                                 <MenuItem Header="Properties" Command="{Binding ShowPropertiesCommand}" IsEnabled="{Binding CanShowProperties}" />
                             </ContextMenu>
@@ -384,6 +396,83 @@
                            FontWeight="SemiBold"
                            VerticalAlignment="Center" />
             </Grid>
+        </Border>
+
+        <!-- Delete Confirmation / Protected Warning Modal Overlay -->
+        <Border Grid.Row="0" Grid.RowSpan="5"
+                Background="#66000000"
+                IsVisible="{Binding IsDeleteConfirmationVisible}">
+            <Border Background="White"
+                    BorderBrush="#D1D5DB"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Width="500"
+                    Padding="22"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    BoxShadow="0 15 35 #50000000">
+                <StackPanel Spacing="14">
+                    <!-- Title & Icon -->
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="🛡️" FontSize="22" IsVisible="{Binding IsDeleteBlocked}" VerticalAlignment="Center" />
+                        <TextBlock Text="🗑️" FontSize="22" IsVisible="{Binding !IsDeleteBlocked}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding PendingDeleteTitle}"
+                                   FontWeight="Bold" FontSize="15" Foreground="#111827"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- Details Box -->
+                    <Border Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6" Padding="12">
+                        <StackPanel Spacing="6">
+                            <Grid ColumnDefinitions="60,*">
+                                <TextBlock Grid.Column="0" Text="Name:" FontWeight="SemiBold" FontSize="12" Foreground="#6B7280" />
+                                <TextBlock Grid.Column="1" Text="{Binding PendingDeleteItemName}" FontWeight="Bold" FontSize="12" Foreground="#111827" TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                            <Grid ColumnDefinitions="60,*">
+                                <TextBlock Grid.Column="0" Text="Size:" FontWeight="SemiBold" FontSize="12" Foreground="#6B7280" />
+                                <TextBlock Grid.Column="1" Text="{Binding PendingDeleteSize}" FontSize="12" Foreground="#111827" />
+                            </Grid>
+                            <Grid ColumnDefinitions="60,*">
+                                <TextBlock Grid.Column="0" Text="Path:" FontWeight="SemiBold" FontSize="12" Foreground="#6B7280" />
+                                <TextBlock Grid.Column="1" Text="{Binding PendingDeletePath}" FontSize="11" Foreground="#4B5563" TextWrapping="Wrap" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Warning: Blocked -->
+                    <Border Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1" CornerRadius="6" Padding="10"
+                            IsVisible="{Binding IsDeleteBlocked}">
+                        <TextBlock Text="{Binding DeleteBlockedReason}"
+                                   FontSize="12" Foreground="#991B1B" FontWeight="Medium" TextWrapping="Wrap" />
+                    </Border>
+
+                    <!-- Notice: Allowed -->
+                    <TextBlock Text="This item will be moved to the Windows Recycle Bin and can be restored if needed."
+                               FontSize="12" Foreground="#4B5563" TextWrapping="Wrap"
+                               IsVisible="{Binding !IsDeleteBlocked}" />
+
+                    <!-- Buttons -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,6,0,0">
+                        <Button Content="Close"
+                                Command="{Binding CancelDeleteCommand}"
+                                IsVisible="{Binding IsDeleteBlocked}"
+                                Padding="16,6"
+                                FontWeight="SemiBold" />
+
+                        <Button Content="Cancel"
+                                Command="{Binding CancelDeleteCommand}"
+                                IsVisible="{Binding !IsDeleteBlocked}"
+                                Padding="14,6" />
+                        <Button Content="Move to Recycle Bin"
+                                Command="{Binding ConfirmDeleteCommand}"
+                                IsVisible="{Binding !IsDeleteBlocked}"
+                                Background="#DC2626"
+                                Foreground="White"
+                                FontWeight="SemiBold"
+                                Padding="16,6" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
         </Border>
     </Grid>
 </Window>
