@@ -72,7 +72,21 @@ public partial class MainWindow : Window
             var path = folders[0].Path.LocalPath;
             if (Directory.Exists(path))
             {
-                await _vm.StartScanPathAsync(path, isDriveRoot: false);
+                var isNetwork = path.StartsWith(@"\\", StringComparison.Ordinal);
+                if (!isNetwork)
+                {
+                    try
+                    {
+                        var root = Path.GetPathRoot(path);
+                        if (!string.IsNullOrEmpty(root))
+                        {
+                            var d = new DriveInfo(root);
+                            if (d.IsReady && d.DriveType == DriveType.Network) isNetwork = true;
+                        }
+                    }
+                    catch { }
+                }
+                await _vm.RequestScanPathAsync(path, isDriveRoot: false, isNetwork: isNetwork);
             }
         }
     }

@@ -15,6 +15,7 @@ public sealed record TreemapOptions
     public double FolderHeaderHeight { get; init; } = 16.0;
     public double BorderPadding { get; init; } = 1.5;
     public bool UseAllocatedSize { get; init; }
+    public bool ShowFreeSpace { get; init; } = true;
     public TreemapBias Bias { get; init; } = TreemapBias.Equal;
     public int MaxDepth { get; init; } = 8;
 }

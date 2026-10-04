@@ -169,4 +169,25 @@ public class TreemapLayoutEngineTests
         subFolderItem.Children.Count.ShouldBe(1);
         subFolderItem.Children[0].Node.Name.ShouldBe("DeepFile.bin");
     }
+
+    [Fact]
+    public void Treemap_Layout_RespectsShowFreeSpaceToggle()
+    {
+        var root = new StorageNode { Name = @"C:\", Kind = StorageItemKind.Directory, Size = 1000 };
+        root.AddChild(new StorageNode { Name = "Files", Kind = StorageItemKind.Directory, Size = 200 });
+        root.AddChild(new StorageNode { Name = "<Free Space>", Kind = StorageItemKind.DriveFreeSpace, Size = 800 });
+
+        var engine = new TreemapLayoutEngine();
+        var bounds = new LayoutRect(0, 0, 800, 600);
+
+        // When ShowFreeSpace = true
+        var layoutWithFree = engine.ComputeLayout(root, bounds, new TreemapOptions { ShowFreeSpace = true });
+        layoutWithFree.Children.Exists(c => c.Node.Kind == StorageItemKind.DriveFreeSpace).ShouldBeTrue();
+
+        // When ShowFreeSpace = false
+        var layoutWithoutFree = engine.ComputeLayout(root, bounds, new TreemapOptions { ShowFreeSpace = false });
+        layoutWithoutFree.Children.Exists(c => c.Node.Kind == StorageItemKind.DriveFreeSpace).ShouldBeFalse();
+        layoutWithoutFree.Children.Count.ShouldBe(1);
+        layoutWithoutFree.Children[0].Node.Name.ShouldBe("Files");
+    }
 }

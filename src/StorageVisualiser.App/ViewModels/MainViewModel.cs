@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -40,6 +41,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private string _scanProgressText = string.Empty;
 
     [ObservableProperty]
+    private string _currentScanningDirectory = string.Empty;
+
+    [ObservableProperty]
+    private bool _isNetworkWarningVisible;
+
+    [ObservableProperty]
+    private string _networkPathToScan = string.Empty;
+
+    private bool _isNetworkConfirmed;
+
+    [ObservableProperty]
     private StorageNode? _rootNode;
 
     [ObservableProperty]
@@ -63,11 +75,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _canNavigateUp;
 
-    private readonly Stack<StorageNode> _backStack = new();
-    private readonly Stack<StorageNode> _forwardStack = new();
+    [ObservableProperty]
+    private bool _showFreeSpace = true;
 
     [ObservableProperty]
     private int _detailLevel = 3; // 1 (Less) to 5 (More), default 3 matches SpaceMonger
+
+    private readonly Stack<StorageNode> _backStack = new();
+    private readonly Stack<StorageNode> _forwardStack = new();
 
     public TreemapOptions Options { get; set; } = new()
     {
@@ -75,8 +90,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         MinPixelDimension = 14.0,
         MinFolderContentDimension = 34.0,
         FolderHeaderHeight = 16.0,
-        BorderPadding = 1.5
+        BorderPadding = 1.5,
+        ShowFreeSpace = true
     };
+
+    partial void OnShowFreeSpaceChanged(bool value)
+    {
+        Options = Options with { ShowFreeSpace = value };
+        RecomputeLayout(lastWidth, lastHeight);
+    }
 
     partial void OnDetailLevelChanged(int value)
     {
@@ -130,7 +152,40 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public async Task StartDriveScanAsync()
     {
         if (SelectedDrive == null) return;
-        await StartScanPathAsync(SelectedDrive.Name, isDriveRoot: true);
+        var isNetwork = SelectedDrive.DriveType == DriveType.Network;
+        await RequestScanPathAsync(SelectedDrive.Name, isDriveRoot: true, isNetwork: isNetwork);
+    }
+
+    public async Task RequestScanPathAsync(string path, bool isDriveRoot, bool isNetwork)
+    {
+        if (isNetwork && !_isNetworkConfirmed)
+        {
+            NetworkPathToScan = path;
+            IsNetworkWarningVisible = true;
+            return;
+        }
+
+        _isNetworkConfirmed = false;
+        IsNetworkWarningVisible = false;
+        await StartScanPathAsync(path, isDriveRoot);
+    }
+
+    [RelayCommand]
+    public async Task ConfirmNetworkScanAsync()
+    {
+        _isNetworkConfirmed = true;
+        IsNetworkWarningVisible = false;
+        if (!string.IsNullOrEmpty(NetworkPathToScan))
+        {
+            await StartScanPathAsync(NetworkPathToScan, isDriveRoot: true);
+        }
+    }
+
+    [RelayCommand]
+    public void DismissNetworkWarning()
+    {
+        IsNetworkWarningVisible = false;
+        NetworkPathToScan = string.Empty;
     }
 
     public async Task StartScanPathAsync(string path, bool isDriveRoot)
@@ -144,6 +199,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IsScanning = true;
         StatusText = $"Scanning '{path}'...";
         ScanProgressText = "Starting scan...";
+        CurrentScanningDirectory = path;
 
         DriveType driveType = DriveType.Unknown;
         long totalBytes = 0;
@@ -176,24 +232,30 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         if (target.IsNetwork)
         {
-            StatusText = $"Scanning network location '{path}' (this may take longer)...";
+            StatusText = $"Scanning network location '{path}'...";
         }
 
         var progress = new Progress<ScanProgress>(p =>
         {
             ScanProgressText = $"{p.FilesScanned:N0} files, {p.DirectoriesScanned:N0} dirs ({SizeFormatter.Format(p.BytesScanned)}) - {p.ElapsedTime:mm\\:ss}";
+            CurrentScanningDirectory = p.CurrentDirectory;
         });
 
+        var stopwatch = Stopwatch.StartNew();
         try
         {
             var root = await _scanner.ScanAsync(target, progress, _scanCts.Token);
+            stopwatch.Stop();
             RootNode = root;
             _backStack.Clear();
             _forwardStack.Clear();
             UpdateNavigationState();
 
             SetViewNode(root, saveHistory: false);
-            StatusText = $"Scan complete. {root.FileCount:N0} files, {root.DirectoryCount:N0} directories ({SizeFormatter.Format(root.Size)} total).";
+            var durationStr = stopwatch.Elapsed.TotalMinutes >= 1
+                ? $"{stopwatch.Elapsed:mm\\:ss}"
+                : $"{stopwatch.Elapsed.TotalSeconds:F1}s";
+            StatusText = $"Scan complete in {durationStr}. {root.FileCount:N0} files, {root.DirectoryCount:N0} directories ({SizeFormatter.Format(root.Size)} total).";
         }
         catch (OperationCanceledException)
         {
@@ -207,6 +269,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             IsScanning = false;
             ScanProgressText = string.Empty;
+            CurrentScanningDirectory = string.Empty;
         }
     }
 
@@ -327,6 +390,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (SelectedNode != null)
         {
+            if (SelectedNode.Kind == StorageItemKind.DriveFreeSpace)
+            {
+                // Free space is not a file/folder on disk; open the drive root instead!
+                var driveRoot = SelectedNode.Parent?.GetFullPath() ?? CurrentPath;
+                WindowsShellHelper.OpenInExplorer(driveRoot);
+                return;
+            }
             WindowsShellHelper.OpenInExplorer(SelectedNode.GetFullPath());
         }
     }
@@ -336,6 +406,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (SelectedNode != null)
         {
+            if (SelectedNode.Kind == StorageItemKind.DriveFreeSpace || SelectedNode.Kind == StorageItemKind.OtherGroup)
+            {
+                return;
+            }
             WindowsShellHelper.OpenFileOrFolder(SelectedNode.GetFullPath());
         }
     }
@@ -345,6 +419,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (SelectedNode != null)
         {
+            if (SelectedNode.Kind == StorageItemKind.DriveFreeSpace)
+            {
+                var driveRoot = SelectedNode.Parent?.GetFullPath() ?? CurrentPath;
+                WindowsShellHelper.ShowFileProperties(driveRoot);
+                return;
+            }
             WindowsShellHelper.ShowFileProperties(SelectedNode.GetFullPath());
         }
     }

@@ -92,9 +92,17 @@ public sealed class TreemapLayoutEngine
 
         foreach (var child in rawChildren)
         {
+            if (child.Kind == StorageItemKind.DriveFreeSpace)
+            {
+                if (options.ShowFreeSpace)
+                {
+                    significantItems.Add((child, Math.Max(0, GetNodeSize(child, options.UseAllocatedSize))));
+                }
+                continue;
+            }
+
             var size = Math.Max(0, GetNodeSize(child, options.UseAllocatedSize));
-            // Always keep DriveFreeSpace visible
-            if (child.Kind == StorageItemKind.DriveFreeSpace || size >= threshold)
+            if (size >= threshold)
             {
                 significantItems.Add((child, size));
             }

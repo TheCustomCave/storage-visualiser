@@ -189,9 +189,10 @@ public sealed class TreemapCanvas : Control
                 {
                     totalFiles = LayoutRoot.Node.FileCount;
                     totalDirs = LayoutRoot.Node.DirectoryCount;
-                    if (LayoutRoot.Node.Size > 0)
+                    long totalCapacity = LayoutRoot.Node.Size + node.Size;
+                    if (totalCapacity > 0)
                     {
-                        freePct = (double)node.Size / LayoutRoot.Node.Size * 100.0;
+                        freePct = (double)node.Size / totalCapacity * 100.0;
                     }
                 }
 
