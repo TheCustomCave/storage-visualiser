@@ -17,22 +17,29 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        Program.Log("MainWindow constructor started");
         InitializeComponent();
+        Program.Log("MainWindow InitializeComponent finished");
         _vm = new MainViewModel();
+        Program.Log("MainWindow MainViewModel created");
         DataContext = _vm;
 
         CanvasControl.NodeSelected += OnCanvasNodeSelected;
         CanvasControl.NodeDrillDown += OnCanvasNodeDrillDown;
         CanvasControl.SizeChangedAction += (w, h) => _vm.RecomputeLayout(w, h);
+        Program.Log("MainWindow constructor finished");
     }
 
     protected override void OnOpened(EventArgs e)
     {
+        Program.Log("MainWindow.OnOpened entered");
         base.OnOpened(e);
         var handle = TryGetPlatformHandle()?.Handle ?? 0;
+        Program.Log($"MainWindow.OnOpened handle={handle}");
         if (handle != 0)
         {
             WindowsShellHelper.EnsureWindowVisible(handle, 1100, 700);
+            Program.Log("MainWindow.OnOpened EnsureWindowVisible finished");
         }
     }
 
