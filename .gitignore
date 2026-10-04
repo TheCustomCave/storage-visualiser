@@ -1,0 +1,23 @@
+# Build output
+bin/
+obj/
+publish/
+artifacts/
+*.user
+*.suo
+.vs/
+.idea/
+*.DotSettings.user
+TestResults/
+
+# Secrets – never commit
+*.pfx
+*.p12
+*.snk
+*.key
+secrets.json
+
+# Local runtime files
+settings.json
+*.svsnap
+logs/
