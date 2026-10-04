@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/StorageVisualiser.App/StorageVisualiser.App.csproj" />
+    <Project Path="src/StorageVisualiser.Cli/StorageVisualiser.Cli.csproj" />
+    <Project Path="src/StorageVisualiser.Core/StorageVisualiser.Core.csproj" />
+    <Project Path="src/StorageVisualiser.Windows/StorageVisualiser.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/StorageVisualiser.Core.Tests/StorageVisualiser.Core.Tests.csproj" />
+  </Folder>
+</Solution>
