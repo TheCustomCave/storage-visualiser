@@ -28,7 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Vertically centered text in the address bar TextBox.
   - Locked Row 2 navigation bar to exact fixed height to eliminate jitter when scanning starts or stops.
   - Balanced Back and Forward button widths with centered text.
+- **Interactive Offline HTML Export (v1)**:
+  - Single-file, 100% self-contained HTML5 report with zero external CDN scripts, remote fonts, or network requests (strict offline privacy).
+  - Interactive canvas treemap with breadcrumb navigation, interactive click & drill-down, hover tooltips, and real-time detail slider.
+  - Built-in search filter across scanned nodes, interactive Top Files table, and File Types breakdown.
+  - Native AOT compatible JSON serialization via source-generated `ReportJsonContext`.
+  - Windows file picker default naming format (`Storage Report - <HOST> - <Target> - <ISO 8601>.html`) defaulting to Documents directory.
 - **Unit Tests**:
-  - Comprehensive unit test suite covering `StorageAnalysisEngine` top-files min-heap, extension aggregator, and `FileActionService` protected path enforcement and logging (24 tests passing).
+  - Comprehensive unit test suite covering `StorageAnalysisEngine` top-files min-heap, extension aggregator, `FileActionService` protected path enforcement and logging, and `HtmlReportExporter` offline compliance and safe encoding (27 tests passing).
 - **Standalone Portable Release**:
   - Zero-prerequisite single-file executable for Windows x64 (`StorageVisualiser-win-x64.zip`).

@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 using StorageVisualiser.App.Models;
 using StorageVisualiser.Core.Actions;
 using StorageVisualiser.Core.Analysis;
+using StorageVisualiser.Core.Export;
 using StorageVisualiser.Core.Formatting;
 using StorageVisualiser.Core.Model;
 using StorageVisualiser.Core.Scanning;
@@ -23,6 +24,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private readonly DirectoryWalkerScanner _scanner = new();
     private readonly TreemapLayoutEngine _layoutEngine = new();
     private readonly FileActionService _fileActionService;
+    private string _lastScanDuration = string.Empty;
+
+    [ObservableProperty]
+    private bool _canExport;
     private CancellationTokenSource? _scanCts;
 
     [ObservableProperty]
@@ -294,6 +299,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         _scanCts = new CancellationTokenSource();
         IsScanning = true;
+        CanExport = false;
         StatusText = $"Scanning '{path}'...";
         ScanProgressText = "Starting scan...";
         CurrentScanningDirectory = path;
@@ -356,6 +362,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             var durationStr = stopwatch.Elapsed.TotalMinutes >= 1
                 ? $"{stopwatch.Elapsed:mm\\:ss}"
                 : $"{stopwatch.Elapsed.TotalSeconds:F1}s";
+            _lastScanDuration = durationStr;
             StatusText = $"Scan complete in {durationStr}. {root.FileCount:N0} files, {root.DirectoryCount:N0} directories ({SizeFormatter.Format(root.Size)} total).";
         }
         catch (OperationCanceledException)
@@ -369,6 +376,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         finally
         {
             IsScanning = false;
+            CanExport = RootNode != null;
             ScanProgressText = string.Empty;
             CurrentScanningDirectory = string.Empty;
         }
@@ -689,6 +697,33 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
 
         PendingDeleteNode = null;
+    }
+
+    public async Task ExportHtmlReportAsync(string targetFilePath)
+    {
+        if (RootNode == null) return;
+
+        try
+        {
+            StatusText = "Exporting HTML report...";
+            var root = RootNode;
+            var path = CurrentPath;
+            var duration = _lastScanDuration;
+
+            var html = await Task.Run(() => HtmlReportExporter.ExportToHtml(
+                root,
+                path,
+                scanDuration: duration,
+                maxTreeDepth: 6));
+
+            await File.WriteAllTextAsync(targetFilePath, html, System.Text.Encoding.UTF8);
+            var fileName = Path.GetFileName(targetFilePath);
+            StatusText = $"HTML report exported successfully: {fileName}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to export HTML report: {ex.Message}";
+        }
     }
 
     public void Dispose()

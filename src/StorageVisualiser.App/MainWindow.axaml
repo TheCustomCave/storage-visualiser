@@ -23,7 +23,7 @@
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
         <!-- Top Toolbar -->
         <Border Grid.Row="0" Background="#F3F4F6" BorderBrush="#D1D5DB" BorderThickness="0,0,0,1" Padding="10,6">
-            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
                 <!-- Drive Selector -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <TextBlock Text="Drive:" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13" Foreground="#1F2937" />
@@ -63,8 +63,17 @@
                             Padding="10,5" />
                 </StackPanel>
 
+                <!-- Export Report Button -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                    <Button Content="📊 Export Report..."
+                            Click="OnExportReportClicked"
+                            IsEnabled="{Binding CanExport}"
+                            Padding="10,5"
+                            ToolTip.Tip="Export an interactive, self-contained HTML storage report" />
+                </StackPanel>
+
                 <!-- SpaceMonger Free Space Toggle -->
-                <ToggleButton Grid.Column="3"
+                <ToggleButton Grid.Column="4"
                               Content="Free Space"
                               IsChecked="{Binding ShowFreeSpace}"
                               Margin="0,0,12,0"
@@ -72,7 +81,7 @@
                               ToolTip.Tip="Toggle display of drive free space on/off" />
 
                 <!-- Detail Slider (SpaceMonger clutter control) -->
-                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <TextBlock Text="Detail:" VerticalAlignment="Center" FontSize="12" FontWeight="Medium" Foreground="#374151" />
                     <Slider Minimum="1" Maximum="5"
                             Value="{Binding DetailLevel}"

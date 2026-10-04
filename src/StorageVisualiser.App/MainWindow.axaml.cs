@@ -118,4 +118,36 @@ public partial class MainWindow : Window
     {
         _vm.OpenInExplorer();
     }
+
+    private static readonly string[] HtmlPatterns = ["*.html"];
+    private static readonly string[] HtmlMimeTypes = ["text/html"];
+
+    private async void OnExportReportClicked(object? sender, RoutedEventArgs e)
+    {
+        if (_vm.RootNode == null) return;
+
+        var defaultFileName = StorageVisualiser.Core.Export.HtmlReportExporter.GenerateDefaultFileName(_vm.CurrentPath, "html");
+        var docsFolder = await StorageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export Storage Report (HTML)",
+            SuggestedFileName = defaultFileName,
+            SuggestedStartLocation = docsFolder,
+            DefaultExtension = "html",
+            FileTypeChoices =
+            [
+                new FilePickerFileType("HTML Report (*.html)")
+                {
+                    Patterns = HtmlPatterns,
+                    MimeTypes = HtmlMimeTypes
+                }
+            ]
+        });
+
+        if (file != null)
+        {
+            var localPath = file.Path.LocalPath;
+            await _vm.ExportHtmlReportAsync(localPath);
+        }
+    }
 }
