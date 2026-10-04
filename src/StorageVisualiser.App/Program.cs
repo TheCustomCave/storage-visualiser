@@ -11,15 +11,13 @@ internal sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        Console.WriteLine("[StorageVisualiser] Starting app...");
         try
         {
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine("[StorageVisualiser] FATAL EXCEPTION: " + ex);
-            System.IO.File.WriteAllText("fatal_crash.log", ex.ToString());
+            Console.Error.WriteLine("[StorageVisualiser] Exception: " + ex.Message);
             throw;
         }
     }

@@ -6,6 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using StorageVisualiser.App.ViewModels;
 using StorageVisualiser.Core.Model;
+using StorageVisualiser.Windows.Shell;
 
 namespace StorageVisualiser.App;
 
@@ -23,6 +24,16 @@ public partial class MainWindow : Window
         CanvasControl.NodeSelected += OnCanvasNodeSelected;
         CanvasControl.NodeDrillDown += OnCanvasNodeDrillDown;
         CanvasControl.SizeChangedAction += (w, h) => _vm.RecomputeLayout(w, h);
+    }
+
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        var handle = TryGetPlatformHandle()?.Handle ?? 0;
+        if (handle != 0)
+        {
+            WindowsShellHelper.EnsureWindowVisible(handle, 1100, 700);
+        }
     }
 
     protected override void OnClosed(EventArgs e)
