@@ -43,13 +43,13 @@ public sealed class DirectoryWalkerScanner : IScanner
         {
             if (progress == null) return;
             var elapsedMs = stopwatch.ElapsedMilliseconds;
-            if (force || elapsedMs - Interlocked.Read(ref lastReportTime) >= 50)
+            if (force || elapsedMs - lastReportTime >= 100)
             {
-                Interlocked.Exchange(ref lastReportTime, elapsedMs);
+                lastReportTime = elapsedMs;
                 progress.Report(new ScanProgress(
-                    Interlocked.Read(ref totalFiles),
-                    Interlocked.Read(ref totalDirs),
-                    Interlocked.Read(ref totalBytes),
+                    totalFiles,
+                    totalDirs,
+                    totalBytes,
                     currentDir,
                     stopwatch.Elapsed));
             }

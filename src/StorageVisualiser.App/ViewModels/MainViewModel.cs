@@ -66,12 +66,31 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private readonly Stack<StorageNode> _backStack = new();
     private readonly Stack<StorageNode> _forwardStack = new();
 
+    [ObservableProperty]
+    private int _detailLevel = 3; // 1 (Less) to 5 (More), default 3 matches SpaceMonger
+
     public TreemapOptions Options { get; set; } = new()
     {
-        MinItemFraction = 0.002, // 0.2%
-        FolderHeaderHeight = 18.0,
-        BorderPadding = 2.0
+        MinItemFraction = 0.005,
+        MinPixelDimension = 14.0,
+        MinFolderContentDimension = 34.0,
+        FolderHeaderHeight = 16.0,
+        BorderPadding = 1.5
     };
+
+    partial void OnDetailLevelChanged(int value)
+    {
+        Options = value switch
+        {
+            1 => Options with { MinItemFraction = 0.015, MinPixelDimension = 22.0, MinFolderContentDimension = 48.0 },
+            2 => Options with { MinItemFraction = 0.008, MinPixelDimension = 18.0, MinFolderContentDimension = 40.0 },
+            3 => Options with { MinItemFraction = 0.005, MinPixelDimension = 14.0, MinFolderContentDimension = 34.0 },
+            4 => Options with { MinItemFraction = 0.003, MinPixelDimension = 10.0, MinFolderContentDimension = 26.0 },
+            5 => Options with { MinItemFraction = 0.0015, MinPixelDimension = 6.0, MinFolderContentDimension = 18.0 },
+            _ => Options
+        };
+        RecomputeLayout(lastWidth, lastHeight);
+    }
 
     public MainViewModel()
     {

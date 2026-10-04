@@ -8,7 +8,7 @@
         x:Class="StorageVisualiser.App.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Storage Visualiser"
-        Width="1100" Height="700"
+        Width="1150" Height="750"
         MinWidth="600" MinHeight="400"
         WindowStartupLocation="CenterScreen"
         WindowState="Normal"
@@ -16,50 +16,66 @@
 
     <Grid RowDefinitions="Auto,Auto,*,Auto">
         <!-- Top Toolbar -->
-        <Border Grid.Row="0" Background="#F8F9FA" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="8,6">
-            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto">
+        <Border Grid.Row="0" Background="#F3F4F6" BorderBrush="#D1D5DB" BorderThickness="0,0,0,1" Padding="10,6">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
                 <!-- Drive Selector -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <TextBlock Text="Drive:" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13" />
+                    <TextBlock Text="Drive:" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13" Foreground="#1F2937" />
                     <ComboBox ItemsSource="{Binding Drives}"
                               SelectedItem="{Binding SelectedDrive}"
                               Width="260"
+                              Background="White"
+                              Foreground="#111111"
+                              BorderBrush="#D1D5DB"
                               IsEnabled="{Binding !IsScanning}">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding DisplayText}" />
+                                <TextBlock Text="{Binding DisplayText}" Foreground="#111111" />
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
                     <Button Content="Scan Drive"
                             Command="{Binding StartDriveScanCommand}"
                             IsEnabled="{Binding !IsScanning}"
-                            FontWeight="SemiBold" />
+                            FontWeight="SemiBold"
+                            Padding="12,5" />
                 </StackPanel>
 
-                <!-- Folder Browse -->
-                <Button Grid.Column="1"
-                        Content="Browse Folder..."
-                        Click="OnBrowseFolderClicked"
-                        IsEnabled="{Binding !IsScanning}"
-                        Margin="10,0,0,0" />
-
-                <!-- Rescan Buttons -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="10,0,0,0">
+                <!-- Folder & Rescan Buttons -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="10,0,0,0" VerticalAlignment="Center">
+                    <Button Content="Browse Folder..."
+                            Click="OnBrowseFolderClicked"
+                            IsEnabled="{Binding !IsScanning}"
+                            Padding="10,5" />
                     <Button Content="Rescan Folder"
                             Click="OnRescanFolderClicked"
-                            IsEnabled="{Binding !IsScanning}" />
+                            IsEnabled="{Binding !IsScanning}"
+                            Padding="10,5" />
                     <Button Content="Rescan Drive"
                             Command="{Binding StartDriveScanCommand}"
-                            IsEnabled="{Binding !IsScanning}" />
+                            IsEnabled="{Binding !IsScanning}"
+                            Padding="10,5" />
+                </StackPanel>
+
+                <!-- Detail Slider (SpaceMonger clutter control) -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Detail:" VerticalAlignment="Center" FontSize="12" FontWeight="Medium" Foreground="#374151" />
+                    <Slider Minimum="1" Maximum="5"
+                            Value="{Binding DetailLevel}"
+                            Width="90"
+                            IsSnapToTickEnabled="True"
+                            TickFrequency="1"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="Treemap Detail (1=Less Detail / Cleaner, 5=More Detail / Deep)" />
                 </StackPanel>
 
                 <!-- Cancel Scan -->
                 <Button Grid.Column="3"
-                        Content="Cancel"
+                        Content="Cancel Scan"
                         Command="{Binding CancelScanCommand}"
                         IsVisible="{Binding IsScanning}"
-                        Margin="10,0,0,0" />
+                        Margin="10,0,0,0"
+                        Padding="10,5" />
 
                 <!-- Active Progress Indicator -->
                 <StackPanel Grid.Column="5" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" VerticalAlignment="Center">
@@ -69,38 +85,45 @@
                     <TextBlock Text="{Binding ScanProgressText}"
                                VerticalAlignment="Center"
                                FontSize="12"
-                               Foreground="#555555" />
+                               Foreground="#4B5563" />
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- Navigation Bar -->
-        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#EEEEEE" BorderThickness="0,0,0,1" Padding="8,4">
+        <Border Grid.Row="1" Background="#FAFAFA" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="10,5">
             <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*">
                 <Button Grid.Column="0" Content="◀ Back"
                         Command="{Binding NavigateBackCommand}"
                         IsEnabled="{Binding CanNavigateBack}"
+                        Padding="8,4"
                         Margin="0,0,4,0" />
                 <Button Grid.Column="1" Content="▶ Fwd"
                         Command="{Binding NavigateForwardCommand}"
                         IsEnabled="{Binding CanNavigateForward}"
+                        Padding="8,4"
                         Margin="0,0,4,0" />
                 <Button Grid.Column="2" Content="▲ Up"
                         Command="{Binding NavigateUpCommand}"
                         IsEnabled="{Binding CanNavigateUp}"
+                        Padding="8,4"
                         Margin="0,0,4,0" />
                 <Button Grid.Column="3" Content="⌂ Home"
                         Command="{Binding NavigateHomeCommand}"
                         IsEnabled="{Binding CanNavigateUp}"
+                        Padding="8,4"
                         Margin="0,0,8,0" />
 
                 <TextBox Grid.Column="4"
                          Text="{Binding CurrentPath, Mode=OneWay}"
                          IsReadOnly="True"
                          VerticalAlignment="Center"
-                         Background="#FAFAFA"
+                         Background="White"
+                         Foreground="#111111"
+                         BorderBrush="#D1D5DB"
                          FontFamily="Consolas, Segoe UI"
-                         FontSize="12" />
+                         FontSize="12"
+                         Padding="6,4" />
             </Grid>
         </Border>
 
@@ -121,17 +144,18 @@
         </controls:TreemapCanvas>
 
         <!-- Status Bar -->
-        <Border Grid.Row="3" Background="#F1F3F4" BorderBrush="#DADCE0" BorderThickness="0,1,0,0" Padding="8,4">
+        <Border Grid.Row="3" Background="#E5E7EB" BorderBrush="#D1D5DB" BorderThickness="0,1,0,0" Padding="10,5">
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <TextBlock Grid.Column="0"
                            Text="{Binding StatusText}"
                            FontSize="12"
                            VerticalAlignment="Center"
-                           FontWeight="Medium" />
+                           FontWeight="Medium"
+                           Foreground="#1F2937" />
                 <TextBlock Grid.Column="2"
                            Text="{Binding SelectionDetailText}"
                            FontSize="12"
-                           Foreground="#1A73E8"
+                           Foreground="#005FB8"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center" />
             </Grid>

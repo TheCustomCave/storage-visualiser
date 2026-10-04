@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
@@ -34,29 +35,38 @@ public sealed class TreemapCanvas : Control
     public event Action<StorageNode>? NodeDrillDown;
     public event Action<double, double>? SizeChangedAction;
 
-    private static readonly IBrush FreeSpaceBrush = new SolidColorBrush(Color.Parse("#F2F4F4"));
-    private static readonly IBrush FreeSpaceHeaderBrush = new SolidColorBrush(Color.Parse("#CFD8DC"));
-    private static readonly IBrush OtherGroupBrush = new SolidColorBrush(Color.Parse("#EEEEEE"));
+    // SpaceMonger classic palette
+    private static readonly IBrush FreeSpaceBrush = new SolidColorBrush(Color.Parse("#ECECEC"));
+    private static readonly IBrush OtherGroupBrush = new SolidColorBrush(Color.Parse("#E0E0E0"));
     private static readonly IBrush InaccessibleBrush = new SolidColorBrush(Color.Parse("#FFCDD2"));
-    private static readonly IPen BorderPen = new Pen(new SolidColorBrush(Color.Parse("#333333")), 0.75);
-    private static readonly IPen SelectionPen = new Pen(new SolidColorBrush(Color.Parse("#0078D4")), 2.0);
-    private static readonly IBrush SelectionOverlayBrush = new SolidColorBrush(Color.FromArgb(40, 0, 120, 212));
+    private static readonly IPen BorderPen = new Pen(new SolidColorBrush(Color.Parse("#222222")), 1.0);
+    private static readonly IPen SelectionPen = new Pen(new SolidColorBrush(Color.Parse("#0078D4")), 2.5);
+    private static readonly IBrush SelectionOverlayBrush = new SolidColorBrush(Color.FromArgb(45, 0, 120, 212));
     private static readonly IBrush TextBrush = new SolidColorBrush(Color.Parse("#111111"));
     private static readonly Typeface DefaultTypeface = new("Segoe UI", FontStyle.Normal, FontWeight.Normal);
     private static readonly Typeface BoldTypeface = new("Segoe UI", FontStyle.Normal, FontWeight.SemiBold);
 
+    // SpaceMonger rainbow depth levels
     private static readonly (IBrush Content, IBrush Header)[] DepthPalette =
     [
-        (new SolidColorBrush(Color.Parse("#FFF9C4")), new SolidColorBrush(Color.Parse("#FBC02D"))), // Gold / Yellow
-        (new SolidColorBrush(Color.Parse("#C8E6C9")), new SolidColorBrush(Color.Parse("#4CAF50"))), // Green
-        (new SolidColorBrush(Color.Parse("#B3E5FC")), new SolidColorBrush(Color.Parse("#03A9F4"))), // Light Blue
-        (new SolidColorBrush(Color.Parse("#E1BEE7")), new SolidColorBrush(Color.Parse("#9C27B0"))), // Purple
-        (new SolidColorBrush(Color.Parse("#FFCCBC")), new SolidColorBrush(Color.Parse("#FF5722"))), // Coral
-        (new SolidColorBrush(Color.Parse("#B2DFDB")), new SolidColorBrush(Color.Parse("#009688"))), // Teal
-        (new SolidColorBrush(Color.Parse("#D1C4E9")), new SolidColorBrush(Color.Parse("#673AB7")))  // Deep Purple
+        // Depth 0: Salmon / Coral Red
+        (new SolidColorBrush(Color.Parse("#FFEBE8")), new SolidColorBrush(Color.Parse("#FF7060"))),
+        // Depth 1: Soft Canary Yellow
+        (new SolidColorBrush(Color.Parse("#FFFDE7")), new SolidColorBrush(Color.Parse("#FFE040"))),
+        // Depth 2: Mint / Spring Green
+        (new SolidColorBrush(Color.Parse("#E8F5E9")), new SolidColorBrush(Color.Parse("#76D275"))),
+        // Depth 3: Sky Blue / Cyan
+        (new SolidColorBrush(Color.Parse("#E1F5FE")), new SolidColorBrush(Color.Parse("#40C4FF"))),
+        // Depth 4: Lavender / Soft Purple
+        (new SolidColorBrush(Color.Parse("#F3E5F5")), new SolidColorBrush(Color.Parse("#BA68C8"))),
+        // Depth 5: Warm Coral / Peach
+        (new SolidColorBrush(Color.Parse("#FBE9E7")), new SolidColorBrush(Color.Parse("#FF8A65"))),
+        // Depth 6: Aqua / Teal
+        (new SolidColorBrush(Color.Parse("#E0F2F1")), new SolidColorBrush(Color.Parse("#4DB6AC")))
     ];
 
-    private static readonly IBrush FileFillBrush = new SolidColorBrush(Color.Parse("#E3F2FD"));
+    // SpaceMonger warm peach/salmon tile color for files
+    private static readonly IBrush FileFillBrush = new SolidColorBrush(Color.Parse("#FFCCBC"));
 
     static TreemapCanvas()
     {
@@ -140,13 +150,13 @@ public sealed class TreemapCanvas : Control
                         CultureInfo.CurrentCulture,
                         FlowDirection.LeftToRight,
                         BoldTypeface,
-                        Math.Max(9, Math.Min(11, h.Height - 4)),
+                        Math.Max(9.5, Math.Min(11.0, h.Height - 5)),
                         TextBrush)
                     {
                         MaxTextWidth = Math.Max(0, h.Width - 6),
                         MaxTextHeight = h.Height
                     };
-                    context.DrawText(ft, new Point(h.X + 3, h.Y + (h.Height - ft.Height) / 2));
+                    context.DrawText(ft, new Point(h.X + 4, h.Y + (h.Height - ft.Height) / 2));
                 }
             }
 
@@ -158,15 +168,34 @@ public sealed class TreemapCanvas : Control
                     RenderItem(context, child);
                 }
             }
+            else if (item.HeaderBounds.IsEmpty && b.Width >= 24 && b.Height >= 14)
+            {
+                // Atomic leaf folder without separate header
+                DrawBlockText(context, node.Name, SizeFormatter.Format(node.Size), null, rect);
+            }
         }
         else if (node.Kind == StorageItemKind.DriveFreeSpace)
         {
             context.FillRectangle(FreeSpaceBrush, rect);
             context.DrawRectangle(BorderPen, rect);
 
-            if (b.Width >= 40 && b.Height >= 25)
+            if (b.Width >= 60 && b.Height >= 35)
             {
-                DrawBlockText(context, "<Free Space>", SizeFormatter.Format(node.Size), null, rect);
+                double freePct = 0;
+                long totalFiles = 0;
+                long totalDirs = 0;
+
+                if (LayoutRoot?.Node != null)
+                {
+                    totalFiles = LayoutRoot.Node.FileCount;
+                    totalDirs = LayoutRoot.Node.DirectoryCount;
+                    if (LayoutRoot.Node.Size > 0)
+                    {
+                        freePct = (double)node.Size / LayoutRoot.Node.Size * 100.0;
+                    }
+                }
+
+                DrawFreeSpaceText(context, freePct, node.Size, totalFiles, totalDirs, rect);
             }
         }
         else if (node.Kind == StorageItemKind.OtherGroup)
@@ -174,7 +203,7 @@ public sealed class TreemapCanvas : Control
             context.FillRectangle(OtherGroupBrush, rect);
             context.DrawRectangle(BorderPen, rect);
 
-            if (b.Width >= 30 && b.Height >= 20)
+            if (b.Width >= 26 && b.Height >= 14)
             {
                 DrawBlockText(context, node.Name, SizeFormatter.Format(node.Size), null, rect);
             }
@@ -205,16 +234,70 @@ public sealed class TreemapCanvas : Control
         }
     }
 
+    private static void DrawFreeSpaceText(
+        DrawingContext context,
+        double freePct,
+        long freeBytes,
+        long totalFiles,
+        long totalDirs,
+        Rect rect)
+    {
+        var lines = new List<string>
+        {
+            freePct > 0 ? $"<Free Space: {freePct:F1}%>" : "<Free Space>",
+            $"{SizeFormatter.Format(freeBytes)} Free"
+        };
+
+        if (totalFiles > 0 || totalDirs > 0)
+        {
+            lines.Add($"Files Total: {totalFiles:N0}");
+            lines.Add($"Folders Total: {totalDirs:N0}");
+        }
+
+        double lineHeight = 18.0;
+        double totalH = lines.Count * lineHeight;
+        if (rect.Height < totalH + 10 || rect.Width < 110)
+        {
+            lines = [lines[0], lines[1]];
+            totalH = lines.Count * lineHeight;
+            if (rect.Height < totalH) return;
+        }
+
+        double startY = rect.Y + (rect.Height - totalH) / 2.0;
+
+        for (int i = 0; i < lines.Count; i++)
+        {
+            var isBold = i == 0;
+            var tf = isBold ? BoldTypeface : DefaultTypeface;
+            var fontSize = isBold ? 12.0 : 10.5;
+
+            var ft = new FormattedText(
+                lines[i],
+                CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                tf,
+                fontSize,
+                TextBrush)
+            {
+                MaxTextWidth = rect.Width - 10,
+                TextAlignment = TextAlignment.Center
+            };
+
+            context.DrawText(ft, new Point(rect.X + 5, startY + (i * lineHeight)));
+        }
+    }
+
     private static void DrawBlockText(DrawingContext context, string title, string? subtitle, string? extra, Rect rect)
     {
-        var padX = 3.0;
+        var padX = 4.0;
         var padY = 2.0;
         var availW = Math.Max(0, rect.Width - padX * 2);
         var availH = Math.Max(0, rect.Height - padY * 2);
 
-        if (availW < 15 || availH < 10) return;
+        // Do not render text if box is too small (prevents ... dot clutter)
+        if (availW < 24 || availH < 14) return;
 
-        double fontSize = availH >= 40 ? 11 : 9.5;
+        double fontSize = availH >= 45 ? 10.5 : 9.0;
 
         // Line 1: Title
         var ftTitle = new FormattedText(
@@ -234,14 +317,14 @@ public sealed class TreemapCanvas : Control
         curY += ftTitle.Height;
 
         // Line 2: Size
-        if (subtitle != null && curY + 10 <= rect.Bottom - padY)
+        if (subtitle != null && curY + 11 <= rect.Bottom - padY)
         {
             var ftSub = new FormattedText(
                 subtitle,
                 CultureInfo.CurrentCulture,
                 FlowDirection.LeftToRight,
                 DefaultTypeface,
-                Math.Max(8.5, fontSize - 1.5),
+                Math.Max(8.0, fontSize - 1.5),
                 TextBrush)
             {
                 MaxTextWidth = availW,
@@ -252,7 +335,7 @@ public sealed class TreemapCanvas : Control
         }
 
         // Line 3: Extra (Date)
-        if (extra != null && curY + 10 <= rect.Bottom - padY)
+        if (extra != null && curY + 11 <= rect.Bottom - padY)
         {
             var ftExtra = new FormattedText(
                 extra,

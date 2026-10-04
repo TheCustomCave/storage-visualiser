@@ -26,7 +26,9 @@ public sealed class TreemapLayoutEngine
 
     private void LayoutFolderContent(TreemapItem folderItem, LayoutRect availableBounds, int depth, TreemapOptions options)
     {
-        if (depth >= options.MaxDepth || availableBounds.Width < options.MinPixelDimension || availableBounds.Height < options.MinPixelDimension)
+        if (depth >= options.MaxDepth || 
+            availableBounds.Width < options.MinFolderContentDimension || 
+            availableBounds.Height < options.MinFolderContentDimension)
         {
             return;
         }
@@ -37,7 +39,7 @@ public sealed class TreemapLayoutEngine
             return;
         }
 
-        // SpaceMonger style: If not the root view or if folder has depth > 0, allocate header bar
+        // SpaceMonger style: If not the root view (depth > 0), allocate a header bar
         LayoutRect contentRect;
         if (depth > 0)
         {
@@ -47,9 +49,9 @@ public sealed class TreemapLayoutEngine
             var remainingHeight = availableBounds.Height - headerHeight - options.BorderPadding * 2;
             var remainingWidth = availableBounds.Width - options.BorderPadding * 2;
 
-            if (remainingHeight < options.MinPixelDimension || remainingWidth < options.MinPixelDimension)
+            if (remainingHeight < options.MinFolderContentDimension || remainingWidth < options.MinFolderContentDimension)
             {
-                // Too small to show interior children
+                // Folder content is too small to subdivide legibly; keep as a clean solid block with header
                 folderItem.ContentBounds = LayoutRect.Empty;
                 return;
             }
@@ -81,7 +83,9 @@ public sealed class TreemapLayoutEngine
             return;
         }
 
-        var threshold = totalChildSize * options.MinItemFraction;
+        // Deeper folders require relatively larger fractions (e.g. 1.5%+) to prevent visual clutter
+        var minFraction = depth == 0 ? options.MinItemFraction : Math.Max(options.MinItemFraction, 0.015);
+        var threshold = totalChildSize * minFraction;
         var significantItems = new List<(StorageNode Node, long Size)>();
         long otherTotalSize = 0;
         int otherCount = 0;
@@ -110,7 +114,8 @@ public sealed class TreemapLayoutEngine
             layoutElements.Add((item.Node, item.Size, false, 1));
         }
 
-        if (otherTotalSize > 0)
+        // Group into Other block if there is a meaningful amount of grouped data
+        if (otherTotalSize > 0 && otherTotalSize >= threshold * 0.5)
         {
             layoutElements.Add((null, otherTotalSize, true, otherCount));
         }
@@ -146,7 +151,6 @@ public sealed class TreemapLayoutEngine
 
                 if (row.Count > 0 && worstRatio > bestWorstRatio)
                 {
-                    // Adding this item made aspect ratios worse; lock the row
                     break;
                 }
 
@@ -158,13 +162,11 @@ public sealed class TreemapLayoutEngine
 
             if (row.Count == 0 && remainingElements.Count > 0)
             {
-                // Force at least one item
                 row.Add(remainingElements[0]);
                 rowTotalWeight = remainingElements[0].Size;
                 remainingElements.RemoveAt(0);
             }
 
-            // Lay out the row inside remainingRect along shorterEdge
             var rowAreaFraction = currentWeightSum > 0 ? rowTotalWeight / currentWeightSum : 0;
             var rowArea = remainingRect.Area * rowAreaFraction;
             var rowThickness = shorterEdge > 0 ? rowArea / shorterEdge : 0;
@@ -223,6 +225,12 @@ public sealed class TreemapLayoutEngine
         int depth,
         TreemapOptions options)
     {
+        // Don't render items that are smaller than the minimum pixel dimension
+        if (itemRect.Width < options.MinPixelDimension || itemRect.Height < options.MinPixelDimension)
+        {
+            return;
+        }
+
         if (element.IsOther)
         {
             var otherNode = new StorageNode
@@ -257,7 +265,12 @@ public sealed class TreemapLayoutEngine
 
             if (element.Node.Kind == StorageItemKind.Directory && element.Node.HasChildren)
             {
-                LayoutFolderContent(childItem, itemRect, depth + 1, options);
+                // Only subdivide child directory if it has enough screen space to be legible
+                if (itemRect.Width >= options.MinFolderContentDimension && 
+                    itemRect.Height >= options.MinFolderContentDimension + options.FolderHeaderHeight)
+                {
+                    LayoutFolderContent(childItem, itemRect, depth + 1, options);
+                }
             }
         }
     }
