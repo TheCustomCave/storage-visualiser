@@ -8,11 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0-alpha] - 2026-10-05
 
 ### Added
-- **Tree View Percentage Modes & Drive Utilization**:
-  - Tree percentage progress bars now calculate monotonically as **`% of Total`** by default (WinDirStat style), ensuring child bars scale proportionally and never appear visually larger than their parent folder.
-  - Added an in-header toggle between **`% of Total`** and **`% of Parent`** (RidNacs style) with real-time responsive updates without collapsing expanded nodes.
-  - Drive root node now displays true disk utilization (e.g. `699 GB used of 1.82 TB` with accurate 38.4% bar), while drive free space accurately reflects 61.6% capacity across both calculation modes.
-  - Rich percentage tooltips on hover displaying exact size, percentage of total/drive, and percentage of parent.
+- **True Single-File Executable Packaging**:
+  - Configured `PublishSingleFile`, `IncludeNativeLibrariesForSelfExtract`, and `EnableCompressionInSingleFile` in project settings. Release builds now produce a clean, 100% standalone `StorageVisualiser.exe` with zero loose DLLs or framework runtime files in the publish output.
+- **Custom High-Performance PercentageBar Control**:
+  - Replaced Avalonia FluentTheme `ProgressBar` controls with a bespoke, lightweight `PercentageBar` control across Tree, Top Files, and File Types tabs.
+  - Resolves FluentTheme minimum-width clipping, rounded line constraints, and proportional squaring issues that caused percentage fills to appear blank or disproportionately tiny when columns were narrow.
+  - Expanded Tree percentage bar width from 100px to 135px for enhanced readability.
+- **Drive Utilization & Tree Percentage Scaling**:
+  - Aligned root drive used percentage ($28.1\%$) and free space ($71.9\%$) to sum to exactly $100.0\%$, eliminating discrepancy caused by unscanned locked OS metadata.
+  - Corrected Tree `% of Total` mode to scale subfolders relative to total scanned files, while `% of Parent` scales relative to immediate parent folder.
+- **Treemap Edge Snapping & Seamless Boundaries**:
+  - Snapped squarified rows and tiles flush to container edges in `TreemapLayoutEngine`, eliminating floating-point rounding gaps and bottom-right container offsets when adjusting detail slider levels.
+  - Grouped all sub-threshold items into `<Other>` without dropping remaining capacity.
 - **`<Other>` Group Drill-Down & Context Menu Permissions**:
   - Double-clicking or right-clicking and selecting **"🔍 Drill Down into Group"** on any `<Other (N items)>` block now opens that batch as its own interactive treemap view, allowing full inspection of all grouped small files.
   - Preserved original parent node references for all grouped items so drilling down, navigating Up (`▲ Up`), or opening containing folders remains completely accurate and seamless.

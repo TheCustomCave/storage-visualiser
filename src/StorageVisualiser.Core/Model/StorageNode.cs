@@ -63,12 +63,23 @@ public sealed class StorageNode : INotifyPropertyChanged
     public static bool TreePercentageRelativeToTotal { get; set; } = true;
     public static long RootTotalSize { get; set; }
     public static long RootDriveCapacity { get; set; }
+    public static long RootDriveUsedBytes { get; set; }
     public static bool IsRootDrive { get; set; }
 
     public double PercentageOfTotal
     {
         get
         {
+            if (Parent == null)
+            {
+                if (IsRootDrive && RootDriveCapacity > 0)
+                {
+                    long used = RootDriveUsedBytes > 0 ? RootDriveUsedBytes : Size;
+                    return Math.Clamp((double)used / RootDriveCapacity * 100.0, 0.0, 100.0);
+                }
+                return 100.0;
+            }
+
             if (Kind == StorageItemKind.DriveFreeSpace)
             {
                 long capacity = (IsRootDrive && RootDriveCapacity > 0)
@@ -77,12 +88,7 @@ public sealed class StorageNode : INotifyPropertyChanged
                 return capacity > 0 ? Math.Clamp((double)Size / capacity * 100.0, 0.0, 100.0) : 0.0;
             }
 
-            long baseTotal = (IsRootDrive && RootDriveCapacity > 0) ? RootDriveCapacity : RootTotalSize;
-            if (baseTotal <= 0)
-            {
-                baseTotal = Parent?.Size ?? Size;
-            }
-
+            long baseTotal = RootTotalSize > 0 ? RootTotalSize : (Parent?.Size ?? Size);
             if (baseTotal <= 0) return 0.0;
             return Math.Clamp((double)Size / baseTotal * 100.0, 0.0, 100.0);
         }
@@ -96,14 +102,17 @@ public sealed class StorageNode : INotifyPropertyChanged
             {
                 if (IsRootDrive && RootDriveCapacity > 0)
                 {
-                    return Math.Clamp((double)Size / RootDriveCapacity * 100.0, 0.0, 100.0);
+                    long used = RootDriveUsedBytes > 0 ? RootDriveUsedBytes : Size;
+                    return Math.Clamp((double)used / RootDriveCapacity * 100.0, 0.0, 100.0);
                 }
                 return 100.0;
             }
 
             if (Kind == StorageItemKind.DriveFreeSpace)
             {
-                long total = Parent.Size + Size;
+                long total = (IsRootDrive && RootDriveCapacity > 0)
+                    ? RootDriveCapacity
+                    : (Parent.Size + Size);
                 return total > 0 ? Math.Clamp((double)Size / total * 100.0, 0.0, 100.0) : 0.0;
             }
             return Parent.Size > 0 ? Math.Clamp((double)Size / Parent.Size * 100.0, 0.0, 100.0) : 100.0;
@@ -130,8 +139,17 @@ public sealed class StorageNode : INotifyPropertyChanged
     {
         get
         {
-            var totalContext = (IsRootDrive && RootDriveCapacity > 0) ? "of drive" : "of total";
-            var totalStr = $"{PercentageOfTotal:F1}% {totalContext}";
+            if (Parent == null && IsRootDrive && RootDriveCapacity > 0)
+            {
+                return $"{FormattedDisplaySize} | {PercentageOfTotal:F1}% drive utilization";
+            }
+
+            if (Kind == StorageItemKind.DriveFreeSpace)
+            {
+                return $"{FormattedSize} free | {PercentageOfTotal:F1}% of drive capacity";
+            }
+
+            var totalStr = $"{PercentageOfTotal:F1}% of total scanned";
             var parentStr = Parent != null ? $"{PercentageOfParent:F1}% of parent" : null;
             return parentStr != null ? $"{FormattedSize} | {totalStr} ({parentStr})" : $"{FormattedDisplaySize} | {totalStr}";
         }

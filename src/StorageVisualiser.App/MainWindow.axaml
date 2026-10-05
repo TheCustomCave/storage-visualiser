@@ -294,16 +294,12 @@
                                     <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#111827" />
 
                                     <!-- Visual % Bar (WCAG AAA contrast: #0F172A on pastel #93C5FD / #CBD5E1 > 10:1 ratio) -->
-                                    <Border Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="3" Width="100" Height="15" ClipToBounds="True" VerticalAlignment="Center"
-                                            ToolTip.Tip="{Binding TreePercentageTooltip}">
-                                        <Grid>
-                                            <ProgressBar Value="{Binding CurrentTreePercentage}" Minimum="0" Maximum="100"
-                                                         Foreground="{Binding ProgressColor}" Background="Transparent" BorderThickness="0" Height="15" />
-                                            <TextBlock Text="{Binding FormattedPercentage}"
-                                                       FontSize="10" FontWeight="Bold" Foreground="#0F172A"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Grid>
-                                    </Border>
+                                    <controls:PercentageBar Value="{Binding CurrentTreePercentage}"
+                                                            Text="{Binding FormattedPercentage}"
+                                                            FillBrush="{Binding ProgressColor}"
+                                                            Width="135" Height="16"
+                                                            VerticalAlignment="Center"
+                                                            ToolTip.Tip="{Binding TreePercentageTooltip}" />
 
                                     <!-- Size -->
                                     <TextBlock Text="{Binding FormattedDisplaySize}" VerticalAlignment="Center"
@@ -359,18 +355,13 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="File Name" x:DataType="analysis:TopFileItem" Binding="{Binding Name}" Width="250" />
                             <DataGridTextColumn Header="Size" x:DataType="analysis:TopFileItem" Binding="{Binding FormattedSize}" Width="110" />
-                            <DataGridTemplateColumn Header="% of Total" Width="140" SortMemberPath="PercentageOfTotal">
+                            <DataGridTemplateColumn Header="% of Total" Width="150" SortMemberPath="PercentageOfTotal">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate x:DataType="analysis:TopFileItem">
-                                        <Border Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="3" Height="15" Margin="6,2" ClipToBounds="True">
-                                            <Grid>
-                                                <ProgressBar Value="{Binding PercentageOfTotal}" Minimum="0" Maximum="100"
-                                                             Foreground="#FCA5A5" Background="Transparent" BorderThickness="0" Height="15" />
-                                                <TextBlock Text="{Binding FormattedPercentage}"
-                                                           FontSize="10" FontWeight="Bold" Foreground="#0F172A"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            </Grid>
-                                        </Border>
+                                        <controls:PercentageBar Value="{Binding PercentageOfTotal}"
+                                                                Text="{Binding FormattedPercentage}"
+                                                                FillBrush="#FCA5A5"
+                                                                Height="16" Margin="6,2" />
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -420,15 +411,10 @@
                             <DataGridTemplateColumn Header="% of Total" Width="160" SortMemberPath="PercentageOfTotal">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate x:DataType="analysis:FileTypeSummary">
-                                        <Border Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="3" Height="15" Margin="6,2" ClipToBounds="True">
-                                            <Grid>
-                                                <ProgressBar Value="{Binding PercentageOfTotal}" Minimum="0" Maximum="100"
-                                                             Foreground="#86EFAC" Background="Transparent" BorderThickness="0" Height="15" />
-                                                <TextBlock Text="{Binding FormattedPercentage}"
-                                                           FontSize="10" FontWeight="Bold" Foreground="#0F172A"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            </Grid>
-                                        </Border>
+                                        <controls:PercentageBar Value="{Binding PercentageOfTotal}"
+                                                                Text="{Binding FormattedPercentage}"
+                                                                FillBrush="#86EFAC"
+                                                                Height="16" Margin="6,2" />
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>

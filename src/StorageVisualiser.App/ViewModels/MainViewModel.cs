@@ -411,6 +411,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
             StorageNode.RootTotalSize = root.Size;
             StorageNode.RootDriveCapacity = target.TotalSizeBytes;
+            StorageNode.RootDriveUsedBytes = (target.TotalSizeBytes > 0 && target.FreeSizeBytes > 0)
+                ? target.TotalSizeBytes - target.FreeSizeBytes
+                : root.Size;
             StorageNode.IsRootDrive = target.IsDriveRoot;
 
             TreeRoots = [root];

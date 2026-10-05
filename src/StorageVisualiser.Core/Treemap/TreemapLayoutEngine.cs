@@ -125,7 +125,7 @@ public sealed class TreemapLayoutEngine
         }
 
         // Group into Other block if there is a meaningful amount of grouped data
-        if (otherTotalSize > 0 && otherTotalSize >= threshold * 0.5)
+        if (otherTotalSize > 0)
         {
             int filesInOther = 0;
             int dirsInOther = 0;
@@ -207,15 +207,26 @@ public sealed class TreemapLayoutEngine
             var rowArea = remainingRect.Area * rowAreaFraction;
             var rowThickness = shorterEdge > 0 ? rowArea / shorterEdge : 0;
 
+            if (remainingElements.Count == 0)
+            {
+                // Snap last row thickness flush to the remaining edge
+                rowThickness = isHorizontal ? remainingRect.Width : remainingRect.Height;
+            }
+
             if (isHorizontal)
             {
                 var rowRect = new LayoutRect(remainingRect.X, remainingRect.Y, rowThickness, remainingRect.Height);
                 var curY = rowRect.Y;
 
-                foreach (var el in row)
+                for (int i = 0; i < row.Count; i++)
                 {
+                    var el = row[i];
+                    var isLast = i == row.Count - 1;
                     var itemFraction = rowTotalWeight > 0 ? (double)el.Size / rowTotalWeight : 0;
-                    var itemHeight = rowRect.Height * itemFraction;
+                    var itemHeight = isLast
+                        ? Math.Max(0, rowRect.Y + rowRect.Height - curY)
+                        : rowRect.Height * itemFraction;
+
                     var itemRect = new LayoutRect(rowRect.X, curY, rowRect.Width, itemHeight);
                     curY += itemHeight;
 
@@ -233,10 +244,15 @@ public sealed class TreemapLayoutEngine
                 var rowRect = new LayoutRect(remainingRect.X, remainingRect.Y, remainingRect.Width, rowThickness);
                 var curX = rowRect.X;
 
-                foreach (var el in row)
+                for (int i = 0; i < row.Count; i++)
                 {
+                    var el = row[i];
+                    var isLast = i == row.Count - 1;
                     var itemFraction = rowTotalWeight > 0 ? (double)el.Size / rowTotalWeight : 0;
-                    var itemWidth = rowRect.Width * itemFraction;
+                    var itemWidth = isLast
+                        ? Math.Max(0, rowRect.X + rowRect.Width - curX)
+                        : rowRect.Width * itemFraction;
+
                     var itemRect = new LayoutRect(curX, rowRect.Y, itemWidth, rowRect.Height);
                     curX += itemWidth;
 

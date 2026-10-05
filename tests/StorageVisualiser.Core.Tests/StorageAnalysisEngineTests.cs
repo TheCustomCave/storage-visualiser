@@ -139,11 +139,11 @@ public class StorageAnalysisEngineTests
 
         try
         {
-            // Mode 1: % of Total (WinDirStat monotonic scaling)
+            // Mode 1: % of Total (WinDirStat monotonic scaling against scanned total)
             StorageNode.TreePercentageRelativeToTotal = true;
             root.CurrentTreePercentage.ShouldBe(60.0);
-            users.CurrentTreePercentage.ShouldBe(20.0);
-            thecu.CurrentTreePercentage.ShouldBe(10.0);
+            users.CurrentTreePercentage.ShouldBe(33.3, 0.1);
+            thecu.CurrentTreePercentage.ShouldBe(16.7, 0.1);
             (thecu.CurrentTreePercentage < users.CurrentTreePercentage).ShouldBeTrue();
             (users.CurrentTreePercentage < root.CurrentTreePercentage).ShouldBeTrue();
 
