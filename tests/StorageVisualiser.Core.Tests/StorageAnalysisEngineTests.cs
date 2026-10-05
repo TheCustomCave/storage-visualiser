@@ -122,4 +122,88 @@ public class StorageAnalysisEngineTests
         // Restore default
         StorageNode.ShowFreeSpaceInTree = true;
     }
+
+    [Fact]
+    public void StorageNode_TreePercentage_Modes_CalculateCorrectly()
+    {
+        // 600 GB used on a 1000 GB drive
+        var root = new StorageNode { Name = @"C:\", Kind = StorageItemKind.Directory, Size = 600_000_000_000L };
+        var users = new StorageNode { Name = "Users", Kind = StorageItemKind.Directory, Size = 200_000_000_000L };
+        var thecu = new StorageNode { Name = "thecu", Kind = StorageItemKind.Directory, Size = 100_000_000_000L };
+        users.AddChild(thecu);
+        root.AddChild(users);
+
+        StorageNode.IsRootDrive = true;
+        StorageNode.RootDriveCapacity = 1_000_000_000_000L;
+        StorageNode.RootTotalSize = 600_000_000_000L;
+
+        try
+        {
+            // Mode 1: % of Total (WinDirStat monotonic scaling)
+            StorageNode.TreePercentageRelativeToTotal = true;
+            root.CurrentTreePercentage.ShouldBe(60.0);
+            users.CurrentTreePercentage.ShouldBe(20.0);
+            thecu.CurrentTreePercentage.ShouldBe(10.0);
+            (thecu.CurrentTreePercentage < users.CurrentTreePercentage).ShouldBeTrue();
+            (users.CurrentTreePercentage < root.CurrentTreePercentage).ShouldBeTrue();
+
+            root.FormattedDisplaySize.ShouldContain("used of");
+
+            // Mode 2: % of Parent (RidNacs local relative)
+            StorageNode.TreePercentageRelativeToTotal = false;
+            root.CurrentTreePercentage.ShouldBe(60.0); // Drive root still reflects drive utilization
+            users.CurrentTreePercentage.ShouldBe(33.3, 0.1); // 200 / 600
+            thecu.CurrentTreePercentage.ShouldBe(50.0); // 100 / 200
+        }
+        finally
+        {
+            // Restore defaults
+            StorageNode.IsRootDrive = false;
+            StorageNode.RootDriveCapacity = 0;
+            StorageNode.RootTotalSize = 0;
+            StorageNode.TreePercentageRelativeToTotal = true;
+        }
+    }
+
+    [Fact]
+    public void TreemapLayoutEngine_OtherGroup_PopulatesChildren_AndAllowsDrillDown()
+    {
+        var root = new StorageNode { Name = "TestFolder", Kind = StorageItemKind.Directory, Size = 120_000_000 };
+        var bigFile = new StorageNode { Name = "big.bin", Kind = StorageItemKind.File, Size = 100_000_000 };
+        root.AddChild(bigFile);
+
+        for (int i = 0; i < 20; i++)
+        {
+            var smallFile = new StorageNode { Name = $"small_{i}.txt", Kind = StorageItemKind.File, Size = 1_000_000 };
+            root.AddChild(smallFile);
+        }
+
+        var engine = new StorageVisualiser.Core.Treemap.TreemapLayoutEngine();
+        var bounds = new StorageVisualiser.Core.Treemap.LayoutRect(0, 0, 800, 600);
+        var options = new StorageVisualiser.Core.Treemap.TreemapOptions
+        {
+            MinItemFraction = 0.05,
+            MinPixelDimension = 2.0,
+            MinFolderContentDimension = 10.0
+        };
+
+        var layout = engine.ComputeLayout(root, bounds, options);
+        layout.ShouldNotBeNull();
+
+        // Should find OtherGroup item in layout
+        var otherItem = layout.Children.FirstOrDefault(c => c.Node.Kind == StorageItemKind.OtherGroup);
+        otherItem.ShouldNotBeNull();
+        otherItem.Node.Children.Count.ShouldBe(20);
+        otherItem.Node.HasChildren.ShouldBeTrue();
+        otherItem.Node.Parent.ShouldBe(root);
+
+        // Ensure original smallFile parents were NOT mutated
+        otherItem.Node.Children[0].Parent.ShouldBe(root);
+
+        // Drilling down into otherItem.Node produces a valid child layout
+        var drillDownLayout = engine.ComputeLayout(otherItem.Node, bounds, options);
+        drillDownLayout.ShouldNotBeNull();
+        drillDownLayout.Node.ShouldBe(otherItem.Node);
+        drillDownLayout.Children.Count.ShouldBeGreaterThan(0);
+    }
 }

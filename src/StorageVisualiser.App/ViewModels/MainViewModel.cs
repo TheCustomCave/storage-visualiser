@@ -76,6 +76,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private string _selectionDetailText = string.Empty;
 
     [ObservableProperty]
+    private bool _canOpenInExplorer;
+
+    [ObservableProperty]
+    private bool _canCopyPath;
+
+    [ObservableProperty]
+    private bool _canDrillDownSelected;
+
+    [ObservableProperty]
     private bool _canShowProperties;
 
     [ObservableProperty]
@@ -83,6 +92,34 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private bool _canDelete;
+
+    [ObservableProperty]
+    private bool _treePercentageRelativeToTotal = true;
+
+    [ObservableProperty]
+    private bool _treePercentageRelativeToParent;
+
+    partial void OnTreePercentageRelativeToTotalChanged(bool value)
+    {
+        if (value)
+        {
+            _treePercentageRelativeToParent = false;
+            OnPropertyChanged(nameof(TreePercentageRelativeToParent));
+            StorageNode.TreePercentageRelativeToTotal = true;
+            RootNode?.NotifyPercentageChanged();
+        }
+    }
+
+    partial void OnTreePercentageRelativeToParentChanged(bool value)
+    {
+        if (value)
+        {
+            _treePercentageRelativeToTotal = false;
+            OnPropertyChanged(nameof(TreePercentageRelativeToTotal));
+            StorageNode.TreePercentageRelativeToTotal = false;
+            RootNode?.NotifyPercentageChanged();
+        }
+    }
 
     [ObservableProperty]
     private bool _isDeleteConfirmationVisible;
@@ -372,6 +409,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _forwardStack.Clear();
             UpdateNavigationState();
 
+            StorageNode.RootTotalSize = root.Size;
+            StorageNode.RootDriveCapacity = target.TotalSizeBytes;
+            StorageNode.IsRootDrive = target.IsDriveRoot;
+
             TreeRoots = [root];
             TopFiles = new ObservableCollection<TopFileItem>(StorageAnalysisEngine.GetTopFiles(root, 200));
             FileTypes = new ObservableCollection<FileTypeSummary>(StorageAnalysisEngine.GetFileTypeBreakdown(root));
@@ -417,8 +458,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         CurrentViewNode = node;
         CurrentPath = node.GetFullPath();
         UpdateNavigationState();
-        SelectedNode = node;
-        UpdateSelectionDetail(node);
+        SelectNode(node);
 
         RecomputeLayout(lastWidth, lastHeight);
     }
@@ -486,9 +526,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void SelectNode(StorageNode? node)
     {
         SelectedNode = node;
+        CanOpenInExplorer = node != null && node.Kind != StorageItemKind.OtherGroup && node.Kind != StorageItemKind.DriveFreeSpace;
+        CanCopyPath = node != null && node.Kind != StorageItemKind.OtherGroup;
         CanShowProperties = node != null && node.Kind != StorageItemKind.OtherGroup;
         CanOpenFile = node != null && node.Kind != StorageItemKind.OtherGroup && node.Kind != StorageItemKind.DriveFreeSpace;
         CanDelete = node != null && node.Parent != null && node.Kind != StorageItemKind.DriveFreeSpace && node.Kind != StorageItemKind.OtherGroup && node.Kind != StorageItemKind.Inaccessible;
+        CanDrillDownSelected = node != null && (node.Kind == StorageItemKind.Directory || node.Kind == StorageItemKind.OtherGroup) && node.HasChildren && node != CurrentViewNode;
         UpdateSelectionDetail(node);
     }
 
@@ -524,17 +567,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
+    public void DrillDownSelected()
+    {
+        if (SelectedNode != null && CanDrillDownSelected)
+        {
+            SetViewNode(SelectedNode);
+        }
+    }
+
+    [RelayCommand]
     public void OpenInExplorer()
     {
-        if (SelectedNode != null)
+        if (SelectedNode != null && CanOpenInExplorer)
         {
-            if (SelectedNode.Kind == StorageItemKind.DriveFreeSpace || SelectedNode.Kind == StorageItemKind.OtherGroup)
-            {
-                // Open the containing folder in Explorer rather than the virtual '<Other>' string
-                var containingFolder = SelectedNode.Parent?.GetFullPath() ?? CurrentPath;
-                WindowsShellHelper.OpenInExplorer(containingFolder);
-                return;
-            }
             WindowsShellHelper.OpenInExplorer(SelectedNode.GetFullPath());
         }
     }

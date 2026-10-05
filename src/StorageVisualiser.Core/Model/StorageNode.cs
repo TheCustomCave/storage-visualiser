@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace StorageVisualiser.Core.Model;
 
@@ -25,8 +26,10 @@ public enum StorageItemAttributes : ushort
     ReadOnly = 1 << 6
 }
 
-public sealed class StorageNode
+public sealed class StorageNode : INotifyPropertyChanged
 {
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     public required string Name { get; init; }
     public StorageItemKind Kind { get; init; }
     public StorageItemAttributes Attributes { get; init; }
@@ -57,11 +60,47 @@ public sealed class StorageNode
 
     public string FormattedSize => Formatting.SizeFormatter.Format(Size);
 
+    public static bool TreePercentageRelativeToTotal { get; set; } = true;
+    public static long RootTotalSize { get; set; }
+    public static long RootDriveCapacity { get; set; }
+    public static bool IsRootDrive { get; set; }
+
+    public double PercentageOfTotal
+    {
+        get
+        {
+            if (Kind == StorageItemKind.DriveFreeSpace)
+            {
+                long capacity = (IsRootDrive && RootDriveCapacity > 0)
+                    ? RootDriveCapacity
+                    : (Parent != null ? Parent.Size + Size : Size);
+                return capacity > 0 ? Math.Clamp((double)Size / capacity * 100.0, 0.0, 100.0) : 0.0;
+            }
+
+            long baseTotal = (IsRootDrive && RootDriveCapacity > 0) ? RootDriveCapacity : RootTotalSize;
+            if (baseTotal <= 0)
+            {
+                baseTotal = Parent?.Size ?? Size;
+            }
+
+            if (baseTotal <= 0) return 0.0;
+            return Math.Clamp((double)Size / baseTotal * 100.0, 0.0, 100.0);
+        }
+    }
+
     public double PercentageOfParent
     {
         get
         {
-            if (Parent == null) return 100.0;
+            if (Parent == null)
+            {
+                if (IsRootDrive && RootDriveCapacity > 0)
+                {
+                    return Math.Clamp((double)Size / RootDriveCapacity * 100.0, 0.0, 100.0);
+                }
+                return 100.0;
+            }
+
             if (Kind == StorageItemKind.DriveFreeSpace)
             {
                 long total = Parent.Size + Size;
@@ -71,7 +110,46 @@ public sealed class StorageNode
         }
     }
 
-    public string FormattedPercentage => $"{PercentageOfParent:F1}%";
+    public double CurrentTreePercentage => TreePercentageRelativeToTotal ? PercentageOfTotal : PercentageOfParent;
+
+    public string FormattedPercentage => $"{CurrentTreePercentage:F1}%";
+
+    public string FormattedDisplaySize
+    {
+        get
+        {
+            if (Parent == null && IsRootDrive && RootDriveCapacity > 0)
+            {
+                return $"{FormattedSize} used of {Formatting.SizeFormatter.Format(RootDriveCapacity)}";
+            }
+            return FormattedSize;
+        }
+    }
+
+    public string TreePercentageTooltip
+    {
+        get
+        {
+            var totalContext = (IsRootDrive && RootDriveCapacity > 0) ? "of drive" : "of total";
+            var totalStr = $"{PercentageOfTotal:F1}% {totalContext}";
+            var parentStr = Parent != null ? $"{PercentageOfParent:F1}% of parent" : null;
+            return parentStr != null ? $"{FormattedSize} | {totalStr} ({parentStr})" : $"{FormattedDisplaySize} | {totalStr}";
+        }
+    }
+
+    public void NotifyPercentageChanged()
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentTreePercentage)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FormattedPercentage)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TreePercentageTooltip)));
+        if (_children != null)
+        {
+            foreach (var child in _children)
+            {
+                child.NotifyPercentageChanged();
+            }
+        }
+    }
     public string FormattedLastModified => LastModified?.LocalDateTime.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture) ?? "-";
     public string ProgressColor => Kind == StorageItemKind.DriveFreeSpace ? "#CBD5E1" : "#93C5FD";
     public string IconText => Kind switch

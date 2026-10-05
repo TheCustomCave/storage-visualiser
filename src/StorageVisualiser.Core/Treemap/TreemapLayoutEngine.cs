@@ -87,6 +87,7 @@ public sealed class TreemapLayoutEngine
         var minFraction = depth == 0 ? options.MinItemFraction : Math.Max(options.MinItemFraction, 0.015);
         var threshold = totalChildSize * minFraction;
         var significantItems = new List<(StorageNode Node, long Size)>();
+        var otherChildren = new List<StorageNode>();
         long otherTotalSize = 0;
         int otherCount = 0;
 
@@ -110,6 +111,7 @@ public sealed class TreemapLayoutEngine
             {
                 otherTotalSize += size;
                 otherCount++;
+                otherChildren.Add(child);
             }
         }
 
@@ -125,7 +127,33 @@ public sealed class TreemapLayoutEngine
         // Group into Other block if there is a meaningful amount of grouped data
         if (otherTotalSize > 0 && otherTotalSize >= threshold * 0.5)
         {
-            layoutElements.Add((null, otherTotalSize, true, otherCount));
+            int filesInOther = 0;
+            int dirsInOther = 0;
+            foreach (var oc in otherChildren)
+            {
+                if (oc.Kind == StorageItemKind.Directory)
+                {
+                    dirsInOther += 1 + oc.DirectoryCount;
+                    filesInOther += oc.FileCount;
+                }
+                else
+                {
+                    filesInOther++;
+                }
+            }
+
+            var otherNode = new StorageNode
+            {
+                Name = $"<Other ({otherCount:N0} items)>",
+                Kind = StorageItemKind.OtherGroup,
+                Size = otherTotalSize,
+                AllocatedSize = otherTotalSize,
+                Parent = node,
+                FileCount = filesInOther,
+                DirectoryCount = dirsInOther
+            };
+            otherNode.Children.AddRange(otherChildren);
+            layoutElements.Add((otherNode, otherTotalSize, true, otherCount));
         }
 
         // Squarified layout algorithm
@@ -241,12 +269,13 @@ public sealed class TreemapLayoutEngine
 
         if (element.IsOther)
         {
-            var otherNode = new StorageNode
+            var otherNode = element.Node ?? new StorageNode
             {
                 Name = $"<Other ({element.Count:N0} items)>",
                 Kind = StorageItemKind.OtherGroup,
                 Size = element.Size,
-                AllocatedSize = element.Size
+                AllocatedSize = element.Size,
+                Parent = parentFolder.Node
             };
 
             var otherItem = new TreemapItem

@@ -100,7 +100,7 @@ public sealed class TreemapCanvas : Control
         base.OnDoubleTapped(e);
         var pt = e.GetPosition(this);
         var hit = LayoutRoot?.HitTest(pt.X, pt.Y);
-        if (hit?.Node != null && hit.Node.Kind == StorageItemKind.Directory)
+        if (hit?.Node != null && (hit.Node.Kind == StorageItemKind.Directory || (hit.Node.Kind == StorageItemKind.OtherGroup && hit.Node.HasChildren)))
         {
             NodeDrillDown?.Invoke(hit.Node);
         }
@@ -126,12 +126,13 @@ public sealed class TreemapCanvas : Control
         var rect = new Rect(b.X, b.Y, b.Width, b.Height);
         var node = item.Node;
 
-        if (node.Kind == StorageItemKind.Directory)
+        if (node.Kind == StorageItemKind.Directory || item.HasChildren)
         {
             var palette = DepthPalette[item.Depth % DepthPalette.Length];
+            var bgBrush = node.Kind == StorageItemKind.OtherGroup ? OtherGroupBrush : palette.Content;
 
             // Outer folder background
-            context.FillRectangle(palette.Content, rect);
+            context.FillRectangle(bgBrush, rect);
             context.DrawRectangle(BorderPen, rect);
 
             // Folder Header bar

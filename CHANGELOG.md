@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0-alpha] - 2026-10-05
 
 ### Added
+- **Tree View Percentage Modes & Drive Utilization**:
+  - Tree percentage progress bars now calculate monotonically as **`% of Total`** by default (WinDirStat style), ensuring child bars scale proportionally and never appear visually larger than their parent folder.
+  - Added an in-header toggle between **`% of Total`** and **`% of Parent`** (RidNacs style) with real-time responsive updates without collapsing expanded nodes.
+  - Drive root node now displays true disk utilization (e.g. `699 GB used of 1.82 TB` with accurate 38.4% bar), while drive free space accurately reflects 61.6% capacity across both calculation modes.
+  - Rich percentage tooltips on hover displaying exact size, percentage of total/drive, and percentage of parent.
+- **`<Other>` Group Drill-Down & Context Menu Permissions**:
+  - Double-clicking or right-clicking and selecting **"🔍 Drill Down into Group"** on any `<Other (N items)>` block now opens that batch as its own interactive treemap view, allowing full inspection of all grouped small files.
+  - Preserved original parent node references for all grouped items so drilling down, navigating Up (`▲ Up`), or opening containing folders remains completely accurate and seamless.
+  - Fixed context menu permissions for virtual aggregators: disabled "Open in Explorer", "Copy Full Path", "Delete", and "Properties" on `<Other>` groups, while keeping them fully enabled for real files and folders inside.
 - **Navigation Shortcuts & Drag-and-Drop Scanning**:
   - Drag and drop any folder or drive from Windows Explorer straight into the window to trigger a scan.
   - Keyboard navigation shortcuts: `F5` to Rescan, `Backspace` / `Alt+Up` to navigate up, and `Alt+Left` / `Alt+Right` for Back / Forward history.

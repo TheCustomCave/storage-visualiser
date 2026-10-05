@@ -58,6 +58,7 @@ A modern, **portable**, **secure**, open-source disk-space visualiser for Window
 | D22 | Language | English only for now. Localisation is a stretch goal, but strings are kept in resource files from day one. |
 | D23 | Duplicate finder | Stretch goal / side quest. |
 | D24 | Code signing | Separate plan in [code-signing.md](code-signing.md). |
+| D25 | Other group drill-down & tree % scaling | Grouped '<Other>' blocks support drilling down into their own batch of items. Tree percentage bars scale monotonically as % of Total by default with a % of Parent toggle; drive root shows true capacity utilization. |
 
 ---
 

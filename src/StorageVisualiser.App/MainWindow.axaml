@@ -249,9 +249,11 @@
                                         SelectedNode="{Binding SelectedNode}">
                     <controls:TreemapCanvas.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" />
+                            <MenuItem Header="🔍 Drill Down into Group" Command="{Binding DrillDownSelectedCommand}" IsVisible="{Binding CanDrillDownSelected}" />
+                            <Separator IsVisible="{Binding CanDrillDownSelected}" />
+                            <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" IsEnabled="{Binding CanOpenInExplorer}" />
                             <MenuItem Header="Open File / Folder" Command="{Binding OpenFileCommand}" IsEnabled="{Binding CanOpenFile}" />
-                            <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" />
+                            <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" IsEnabled="{Binding CanCopyPath}" />
                             <Separator />
                             <MenuItem Header="Delete to Recycle Bin..." Command="{Binding RequestDeleteCommand}" IsEnabled="{Binding CanDelete}" InputGesture="Delete" />
                             <Separator />
@@ -265,8 +267,19 @@
             <TabItem Header="🌲 Tree">
                 <Grid RowDefinitions="Auto,*">
                     <Border Grid.Row="0" Background="#F3F4F6" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="12,6">
-                        <TextBlock Text="Directory Hierarchy (Expand folders to inspect subtrees, sorted by size descending)"
-                                   FontSize="12" Foreground="#4B5563" FontWeight="Medium" />
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Directory Hierarchy (Expand folders to inspect subtrees, sorted by size descending)"
+                                       VerticalAlignment="Center" FontSize="12" Foreground="#4B5563" FontWeight="Medium" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                                <TextBlock Text="Percentages:" VerticalAlignment="Center" FontSize="11" Foreground="#6B7280" />
+                                <RadioButton Content="% of Total" GroupName="TreePercentageGroup"
+                                             IsChecked="{Binding TreePercentageRelativeToTotal, Mode=TwoWay}"
+                                             FontSize="11" VerticalAlignment="Center" />
+                                <RadioButton Content="% of Parent" GroupName="TreePercentageGroup"
+                                             IsChecked="{Binding TreePercentageRelativeToParent, Mode=TwoWay}"
+                                             FontSize="11" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
                     </Border>
 
                     <TreeView Grid.Row="1"
@@ -281,9 +294,10 @@
                                     <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#111827" />
 
                                     <!-- Visual % Bar (WCAG AAA contrast: #0F172A on pastel #93C5FD / #CBD5E1 > 10:1 ratio) -->
-                                    <Border Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="3" Width="100" Height="15" ClipToBounds="True" VerticalAlignment="Center">
+                                    <Border Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="3" Width="100" Height="15" ClipToBounds="True" VerticalAlignment="Center"
+                                            ToolTip.Tip="{Binding TreePercentageTooltip}">
                                         <Grid>
-                                            <ProgressBar Value="{Binding PercentageOfParent}" Minimum="0" Maximum="100"
+                                            <ProgressBar Value="{Binding CurrentTreePercentage}" Minimum="0" Maximum="100"
                                                          Foreground="{Binding ProgressColor}" Background="Transparent" BorderThickness="0" Height="15" />
                                             <TextBlock Text="{Binding FormattedPercentage}"
                                                        FontSize="10" FontWeight="Bold" Foreground="#0F172A"
@@ -292,7 +306,7 @@
                                     </Border>
 
                                     <!-- Size -->
-                                    <TextBlock Text="{Binding FormattedSize}" VerticalAlignment="Center"
+                                    <TextBlock Text="{Binding FormattedDisplaySize}" VerticalAlignment="Center"
                                                FontFamily="Consolas, Segoe UI" FontSize="12" FontWeight="Bold" Foreground="#1E40AF" />
 
                                     <!-- Sub-items count -->
@@ -310,9 +324,9 @@
                             <ContextMenu>
                                 <MenuItem Header="Show on Map" Command="{Binding ShowSelectedTreeNodeOnMapCommand}" />
                                 <Separator />
-                                <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" />
+                                <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" IsEnabled="{Binding CanOpenInExplorer}" />
                                 <MenuItem Header="Open File / Folder" Command="{Binding OpenFileCommand}" IsEnabled="{Binding CanOpenFile}" />
-                                <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" />
+                                <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" IsEnabled="{Binding CanCopyPath}" />
                                 <Separator />
                                 <MenuItem Header="Delete to Recycle Bin..." Command="{Binding RequestDeleteCommand}" IsEnabled="{Binding CanDelete}" InputGesture="Delete" />
                                 <Separator />
@@ -368,9 +382,9 @@
                             <ContextMenu>
                                 <MenuItem Header="Show on Map" Command="{Binding ShowSelectedTopFileOnMapCommand}" />
                                 <Separator />
-                                <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" />
+                                <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" IsEnabled="{Binding CanOpenInExplorer}" />
                                 <MenuItem Header="Open File" Command="{Binding OpenFileCommand}" IsEnabled="{Binding CanOpenFile}" />
-                                <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" />
+                                <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" IsEnabled="{Binding CanCopyPath}" />
                                 <Separator />
                                 <MenuItem Header="Delete to Recycle Bin..." Command="{Binding RequestDeleteCommand}" IsEnabled="{Binding CanDelete}" InputGesture="Delete" />
                                 <Separator />

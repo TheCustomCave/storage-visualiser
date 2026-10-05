@@ -159,11 +159,9 @@ public partial class MainWindow : Window
 
     private async void OnCopyPathClicked(object? sender, RoutedEventArgs e)
     {
-        if (_vm.SelectedNode != null && Clipboard != null)
+        if (_vm.SelectedNode != null && Clipboard != null && _vm.CanCopyPath)
         {
-            var path = _vm.SelectedNode.Kind == StorageItemKind.OtherGroup
-                ? (_vm.SelectedNode.Parent?.GetFullPath() ?? _vm.CurrentPath)
-                : _vm.SelectedNode.GetFullPath();
+            var path = _vm.SelectedNode.GetFullPath();
             await Clipboard.SetTextAsync(path);
         }
     }
