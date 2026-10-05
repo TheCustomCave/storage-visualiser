@@ -14,10 +14,15 @@
         MinWidth="960" MinHeight="540"
         WindowStartupLocation="CenterScreen"
         WindowState="Normal"
-        ShowInTaskbar="True">
+        DragDrop.AllowDrop="True">
 
     <Window.KeyBindings>
         <KeyBinding Gesture="Delete" Command="{Binding RequestDeleteCommand}" />
+        <KeyBinding Gesture="Back" Command="{Binding NavigateUpCommand}" />
+        <KeyBinding Gesture="Alt+Up" Command="{Binding NavigateUpCommand}" />
+        <KeyBinding Gesture="Alt+Left" Command="{Binding NavigateBackCommand}" />
+        <KeyBinding Gesture="Alt+Right" Command="{Binding NavigateForwardCommand}" />
+        <KeyBinding Gesture="F5" Command="{Binding RescanCommand}" />
     </Window.KeyBindings>
 
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">

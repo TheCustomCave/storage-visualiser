@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -27,7 +28,60 @@ public partial class MainWindow : Window
         CanvasControl.NodeSelected += OnCanvasNodeSelected;
         CanvasControl.NodeDrillDown += OnCanvasNodeDrillDown;
         CanvasControl.SizeChangedAction += (w, h) => _vm.RecomputeLayout(w, h);
+
+        AddHandler(DragDrop.DragOverEvent, OnDragOver);
+        AddHandler(DragDrop.DropEvent, OnDrop);
+
         Program.Log("MainWindow constructor finished");
+    }
+
+    private void OnDragOver(object? sender, DragEventArgs e)
+    {
+        if (e.DataTransfer.Contains(DataFormat.File))
+        {
+            e.DragEffects = DragDropEffects.Copy;
+        }
+        else
+        {
+            e.DragEffects = DragDropEffects.None;
+        }
+    }
+
+    private async void OnDrop(object? sender, DragEventArgs e)
+    {
+        if (!e.DataTransfer.Contains(DataFormat.File)) return;
+
+        try
+        {
+            var item = e.DataTransfer.TryGetValue(DataFormat.File);
+            if (item == null) return;
+
+            var path = item.Path.LocalPath;
+            if (Directory.Exists(path) || File.Exists(path))
+            {
+                var targetPath = Directory.Exists(path) ? path : (Path.GetDirectoryName(path) ?? path);
+                var isDrive = Path.GetPathRoot(targetPath)?.Equals(targetPath, StringComparison.OrdinalIgnoreCase) == true;
+                var isNetwork = targetPath.StartsWith(@"\\", StringComparison.Ordinal);
+                if (!isNetwork)
+                {
+                    try
+                    {
+                        var root = Path.GetPathRoot(targetPath);
+                        if (!string.IsNullOrEmpty(root))
+                        {
+                            var d = new DriveInfo(root);
+                            if (d.IsReady && d.DriveType == DriveType.Network) isNetwork = true;
+                        }
+                    }
+                    catch { }
+                }
+                await _vm.RequestScanPathAsync(targetPath, isDriveRoot: isDrive, isNetwork: isNetwork);
+            }
+        }
+        catch (Exception ex)
+        {
+            Program.Log($"OnDrop error: {ex.Message}");
+        }
     }
 
     protected override void OnOpened(EventArgs e)

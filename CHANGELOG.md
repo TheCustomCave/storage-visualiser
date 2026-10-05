@@ -5,9 +5,15 @@ All notable changes to Storage Visualiser are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0-alpha] - 2026-10-05
 
 ### Added
+- **Navigation Shortcuts & Drag-and-Drop Scanning**:
+  - Drag and drop any folder or drive from Windows Explorer straight into the window to trigger a scan.
+  - Keyboard navigation shortcuts: `F5` to Rescan, `Backspace` / `Alt+Up` to navigate up, and `Alt+Left` / `Alt+Right` for Back / Forward history.
+- **Assembly Metadata & Release Pipeline**:
+  - Embedded release assembly metadata (Version `0.1.0-alpha`, Product, Authors, Copyright).
+  - GitHub Actions automated release pipeline (`.github/workflows/release.yml`) producing single-file x64 binaries, release archives, and SHA-256 checksums on tag pushes.
 - **Tabbed Views Interface (v1)**:
   - **🗺️ Map**: SpaceMonger nested treemap with dynamic rainbow palette, free space display toggle, and detail density slider.
   - **🌲 Tree**: RidNacs-style hierarchical directory tree with visual percentage progress bars, formatted sizes, file counts, and descending size sort.
