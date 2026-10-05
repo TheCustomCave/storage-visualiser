@@ -11,6 +11,8 @@ public sealed class WindowsAutoScanner : IScanner
     private readonly WindowsNtfsMftScanner _mftScanner = new();
     private readonly DirectoryWalkerScanner _walkerScanner = new();
 
+    public static Action<string>? LogAction { get; set; }
+
     public string ScannerName => "Auto (MFT / Directory Walker)";
 
     public string ActiveScannerName { get; private set; } = "Directory Walker";
@@ -20,7 +22,10 @@ public sealed class WindowsAutoScanner : IScanner
         IProgress<ScanProgress>? progress,
         CancellationToken cancellationToken)
     {
-        if (WindowsNtfsMftScanner.CanScan(target))
+        bool canMft = WindowsNtfsMftScanner.CanScan(target);
+        LogAction?.Invoke($"[WindowsAutoScanner] Target='{target.RootPath}', IsDriveRoot={target.IsDriveRoot}, IsAdmin={WindowsNtfsMftScanner.IsAdministrator()}, CanScan={canMft}");
+
+        if (canMft)
         {
             try
             {
@@ -33,7 +38,8 @@ public sealed class WindowsAutoScanner : IScanner
             }
             catch (Exception ex)
             {
-                // MFT scan failed (e.g. security permission, exclusive lock or geometry issue) - fallback to Directory Walker
+                // MFT scan failed - log full exception and fallback to Directory Walker
+                LogAction?.Invoke($"[WindowsAutoScanner] MFT scan failed for '{target.RootPath}': {ex}. Falling back to Directory Walker.");
                 System.Diagnostics.Debug.WriteLine($"[WindowsAutoScanner] MFT scan failed for '{target.RootPath}': {ex.Message}. Falling back to Directory Walker.");
             }
         }

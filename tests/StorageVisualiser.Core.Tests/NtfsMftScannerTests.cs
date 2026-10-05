@@ -144,6 +144,95 @@ public class NtfsMftScannerTests
     }
 
     [Fact]
+    public void DataRunDecoder_DecodesSparseRuns()
+    {
+        // Sparse run: header = 0x02 (offsetLen=0, lengthLen=2)
+        // Length = 100 clusters (0x0064)
+        // Next run: header = 0x21 (offsetLen=2, lengthLen=1), len=50 (0x32), offset=500 (0x01F4)
+        byte[] data = [
+            0x02, 0x64, 0x00,
+            0x21, 0x32, 0xF4, 0x01,
+            0x00
+        ];
+
+        var runs = DataRunDecoder.Decode(data);
+
+        runs.Count.ShouldBe(2);
+        runs[0].StartLcn.ShouldBe(-1); // Sparse
+        runs[0].ClusterCount.ShouldBe(100);
+
+        runs[1].StartLcn.ShouldBe(500);
+        runs[1].ClusterCount.ShouldBe(50);
+    }
+
+    [Fact]
+    public void NtfsMftRecordParser_ParsesRecord0WithDataRuns()
+    {
+        byte[] buffer = new byte[1024];
+
+        // 1. Magic "FILE"
+        Encoding.ASCII.GetBytes("FILE").CopyTo(buffer, 0);
+
+        // 2. USA array at offset 48, count 3
+        BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(4, 2), 48);
+        BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(6, 2), 3);
+
+        // 3. Flags: in use (0x01), NOT a directory (Record 0 is a file)
+        BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(22, 2), 0x0001);
+
+        // 4. First attribute offset = 56
+        BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(20, 2), 56);
+
+        // 5. Update Sequence Array
+        BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(48, 2), 0x55AA);
+        BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(50, 2), 0x0000);
+        BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(52, 2), 0x0000);
+        BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(510, 2), 0x55AA);
+        BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(1022, 2), 0x55AA);
+
+        // 6. Non-resident $DATA attribute (0x80) at offset 56:
+        int attrPos = 56;
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer.AsSpan(attrPos, 4), 0x80); // $DATA
+        ushort attrLen = 72;
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer.AsSpan(attrPos + 4, 4), attrLen);
+        buffer[attrPos + 8] = 1; // non-resident
+        buffer[attrPos + 9] = 0; // name length = 0 (unnamed)
+
+        // Non-resident header fields:
+        // Offset to data run = 48 (relative to attrPos) -> content at attrPos + 48 = 104
+        BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(attrPos + 32, 2), 48);
+        // Allocated size (offset 40)
+        BinaryPrimitives.WriteInt64LittleEndian(buffer.AsSpan(attrPos + 40, 8), 1024 * 1024);
+        // Real size (offset 48)
+        BinaryPrimitives.WriteInt64LittleEndian(buffer.AsSpan(attrPos + 48, 8), 512 * 1024);
+
+        // Data runs at attrPos + 48 (offset 104):
+        // 0x21, len=100 (0x64), offset=1000 (0x03E8), terminating 0x00
+        buffer[attrPos + 48] = 0x21;
+        buffer[attrPos + 49] = 0x64;
+        buffer[attrPos + 50] = 0xE8;
+        buffer[attrPos + 51] = 0x03;
+        buffer[attrPos + 52] = 0x00;
+
+        // Terminating attribute at attrPos + attrLen
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer.AsSpan(attrPos + attrLen, 4), 0xFFFFFFFF);
+
+        bool parsed = NtfsMftRecordParser.TryParseRecord(buffer, 0, out var result);
+
+        parsed.ShouldBeTrue();
+        result.RecordNumber.ShouldBe(0UL);
+        result.Name.ShouldBe("$MFT");
+        result.HasDataRuns.ShouldBeTrue();
+        result.MftDataRuns.ShouldNotBeNull();
+        result.MftDataRuns.Length.ShouldBeGreaterThan(0);
+
+        var runs = DataRunDecoder.Decode(result.MftDataRuns);
+        runs.Count.ShouldBe(1);
+        runs[0].ClusterCount.ShouldBe(100);
+        runs[0].StartLcn.ShouldBe(1000);
+    }
+
+    [Fact]
     public async Task WindowsAutoScanner_FallsBackToWalkerGracefully()
     {
         var scanner = new WindowsAutoScanner();

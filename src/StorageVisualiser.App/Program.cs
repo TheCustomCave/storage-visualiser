@@ -128,6 +128,8 @@ internal sealed class Program
     {
         EnsureRunningOnDefaultDesktop(args);
         Log("Program.Main entered");
+        StorageVisualiser.Windows.Scanning.WindowsAutoScanner.LogAction = Log;
+        StorageVisualiser.Windows.Scanning.WindowsNtfsMftScanner.LogAction = Log;
         try
         {
             Log("Calling StartWithClassicDesktopLifetime...");

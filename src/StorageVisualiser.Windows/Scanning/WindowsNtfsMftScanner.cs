@@ -21,6 +21,8 @@ public sealed class WindowsNtfsMftScanner : IScanner
 
     public string ScannerName => "NTFS MFT Direct Scanner";
 
+    public static Action<string>? LogAction { get; set; }
+
     public static bool IsAdministrator()
     {
         if (!OperatingSystem.IsWindows()) return false;
@@ -69,23 +71,31 @@ public sealed class WindowsNtfsMftScanner : IScanner
         var rootPath = target.RootPath.TrimEnd('\\');
         var volumeDevicePath = @"\\.\" + rootPath;
 
+        LogAction?.Invoke($"[MFT Scanner] Starting MFT scan for {volumeDevicePath}...");
+        NtfsNative.TryEnablePrivilege("SeBackupPrivilege");
+
         using var hVolume = NtfsNative.CreateFile(
             volumeDevicePath,
             NtfsNative.GenericRead,
-            NtfsNative.FileShareRead | NtfsNative.FileShareWrite,
+            NtfsNative.FileShareRead | NtfsNative.FileShareWrite | NtfsNative.FileShareDelete,
             IntPtr.Zero,
             NtfsNative.OpenExisting,
-            0,
+            NtfsNative.FileFlagBackupSemantics,
             IntPtr.Zero);
 
         if (hVolume.IsInvalid)
         {
             var err = Marshal.GetLastWin32Error();
+            LogAction?.Invoke($"[MFT Scanner] CreateFile failed for '{volumeDevicePath}'. Win32 Error: {err}");
             throw new UnauthorizedAccessException($"Failed to open NTFS volume '{volumeDevicePath}'. Win32 Error: {err}");
         }
 
         var volumeData = GetNtfsVolumeData(hVolume);
         var bytesPerCluster = volumeData.BytesPerCluster;
+        var bytesPerSector = volumeData.BytesPerSector > 0 ? volumeData.BytesPerSector : 4096;
+        var recordSize = volumeData.BytesPerFileRecordSegment > 0 ? (int)volumeData.BytesPerFileRecordSegment : 1024;
+        LogAction?.Invoke($"[MFT Scanner] Volume geometry: BytesPerCluster={bytesPerCluster}, BytesPerSector={bytesPerSector}, RecordSize={recordSize}, MftValidDataLength={volumeData.MftValidDataLength}, MftStartLcn={volumeData.MftStartLcn}");
+
         if (bytesPerCluster == 0 || volumeData.MftValidDataLength <= 0)
         {
             throw new InvalidDataException("Invalid NTFS volume geometry returned by device.");
@@ -95,17 +105,19 @@ public sealed class WindowsNtfsMftScanner : IScanner
         var record0 = ReadMftRecord0(hVolume, volumeData);
         if (!record0.HasDataRuns || record0.MftDataRuns == null)
         {
+            LogAction?.Invoke("[MFT Scanner] Failed to decode $MFT data runs from Record 0.");
             throw new InvalidDataException("Failed to decode $MFT data runs from Record 0.");
         }
 
         var runs = DataRunDecoder.Decode(record0.MftDataRuns);
+        LogAction?.Invoke($"[MFT Scanner] Decoded {runs.Count} MFT data runs from Record 0.");
         if (runs.Count == 0)
         {
             throw new InvalidDataException("No cluster runs found for $MFT.");
         }
 
         // 2. Scan and parse all MFT records
-        int totalExpectedRecords = (int)Math.Min(int.MaxValue, volumeData.MftValidDataLength / 1024);
+        int totalExpectedRecords = (int)Math.Min(int.MaxValue, volumeData.MftValidDataLength / recordSize);
         var records = new Dictionary<ulong, ParsedMftRecord>(Math.Min(totalExpectedRecords, 500_000));
         records[0] = record0;
 
@@ -122,6 +134,14 @@ public sealed class WindowsNtfsMftScanner : IScanner
             foreach (var run in runs)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (run.StartLcn < 0)
+                {
+                    // Sparse cluster run in MFT
+                    long sparseBytes = run.ClusterCount * bytesPerCluster;
+                    currentRecordIndex += (ulong)(sparseBytes / recordSize);
+                    continue;
+                }
+
                 long runOffset = run.StartLcn * bytesPerCluster;
                 long runBytes = run.ClusterCount * bytesPerCluster;
                 long bytesRemaining = runBytes;
@@ -135,11 +155,11 @@ public sealed class WindowsNtfsMftScanner : IScanner
                     int bytesRead = RandomAccess.Read(hVolume, readBuffer.AsSpan(0, toRead), currentFilePos);
                     if (bytesRead <= 0) break;
 
-                    int recordsInBuffer = bytesRead / 1024;
+                    int recordsInBuffer = bytesRead / recordSize;
                     for (int r = 0; r < recordsInBuffer; r++)
                     {
                         ulong rIndex = currentRecordIndex + (ulong)r;
-                        var recordSlice = readBuffer.AsSpan(r * 1024, 1024);
+                        var recordSlice = readBuffer.AsSpan(r * recordSize, recordSize);
                         if (NtfsMftRecordParser.TryParseRecord(recordSlice, rIndex, out var parsed))
                         {
                             records[rIndex] = parsed;
@@ -335,14 +355,16 @@ public sealed class WindowsNtfsMftScanner : IScanner
     private static ParsedMftRecord ReadMftRecord0(SafeFileHandle hVolume, in NtfsVolumeDataBuffer volumeData)
     {
         long record0Offset = volumeData.MftStartLcn * volumeData.BytesPerCluster;
-        byte[] buffer = new byte[1024];
+        int recordSize = volumeData.BytesPerFileRecordSegment > 0 ? (int)volumeData.BytesPerFileRecordSegment : 1024;
+        int readLen = Math.Max(4096, Math.Max((int)volumeData.BytesPerCluster, recordSize));
+        byte[] buffer = new byte[readLen];
         int bytesRead = RandomAccess.Read(hVolume, buffer, record0Offset);
-        if (bytesRead < 1024)
+        if (bytesRead < recordSize)
         {
-            throw new InvalidDataException("Failed to read MFT Record 0 from volume.");
+            throw new InvalidDataException($"Failed to read MFT Record 0 from volume. Bytes read: {bytesRead}, expected at least {recordSize}.");
         }
 
-        if (NtfsMftRecordParser.TryParseRecord(buffer, 0, out var rec))
+        if (NtfsMftRecordParser.TryParseRecord(buffer.AsSpan(0, recordSize), 0, out var rec))
         {
             return rec;
         }

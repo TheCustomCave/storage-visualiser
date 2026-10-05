@@ -126,10 +126,23 @@ public static class NtfsMftRecordParser
                     }
                 }
             }
-            else if (attrType == AttrData && !isDir)
+            else if (attrType == AttrData)
             {
+                // Record 0 is $MFT itself! Read its data runs to map the rest of the MFT
+                if (recordIndex == 0 && nonResident != 0 && currentOffset + 34 <= recordBytes.Length)
+                {
+                    ushort dataRunOffset = BinaryPrimitives.ReadUInt16LittleEndian(recordBytes.Slice(currentOffset + 32, 2));
+                    int runStart = currentOffset + dataRunOffset;
+                    int runLen = (int)attrLen - dataRunOffset;
+                    if (runStart + runLen <= recordBytes.Length && runLen > 0)
+                    {
+                        result.HasDataRuns = true;
+                        result.MftDataRuns = recordBytes.Slice(runStart, runLen).ToArray();
+                    }
+                }
+
                 // Unnamed $DATA stream is the default file content
-                if (nameLength == 0)
+                if (!isDir && nameLength == 0)
                 {
                     if (nonResident == 0)
                     {
@@ -146,23 +159,13 @@ public static class NtfsMftRecordParser
                     }
                 }
             }
-            else if (attrType == AttrData && isDir && recordIndex == 0)
-            {
-                // Record 0 is $MFT itself! Read its data runs
-                if (nonResident != 0 && currentOffset + 34 <= recordBytes.Length)
-                {
-                    ushort dataRunOffset = BinaryPrimitives.ReadUInt16LittleEndian(recordBytes.Slice(currentOffset + 32, 2));
-                    int runStart = currentOffset + dataRunOffset;
-                    int runLen = (int)attrLen - dataRunOffset;
-                    if (runStart + runLen <= recordBytes.Length && runLen > 0)
-                    {
-                        result.HasDataRuns = true;
-                        result.MftDataRuns = recordBytes.Slice(runStart, runLen).ToArray();
-                    }
-                }
-            }
 
             currentOffset += (int)attrLen;
+        }
+
+        if (recordIndex == 0 && string.IsNullOrEmpty(result.Name))
+        {
+            result.Name = "$MFT";
         }
 
         return !string.IsNullOrEmpty(result.Name);

@@ -39,16 +39,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Sequential multi-megabyte cluster run streaming via Win32 volume handle reading, parsing 1024-byte MFT records with fixup validation (Update Sequence Array), resident/non-resident `$DATA` streams, and `$FILE_NAME` attributes.
   - Seamless `WindowsAutoScanner` orchestrator: automatically selects high-speed MFT direct reading when elevated on local NTFS drives, and seamlessly falls back to standard `DirectoryWalkerScanner` when non-elevated, on network shares, or for subfolder scans.
   - Real-time active scanner indicator in the status bar (e.g. `Scan complete in 1.4s via NTFS MFT Direct Scanner`).
+- **Elevated NTFS MFT Scanner Fixes & Diagnostics**:
+  - Added `FILE_SHARE_DELETE` (0x04) and `FILE_FLAG_BACKUP_SEMANTICS` to raw volume `CreateFile` calls, preventing `ERROR_SHARING_VIOLATION` (32) when reading live operating system drives (like `C:`) with running background services.
+  - Enabled `SeBackupPrivilege` process token privilege dynamically to guarantee unrestricted raw volume read access when elevated.
+  - Fixed non-resident `$DATA` cluster run parsing in `NtfsMftRecordParser` for Record 0 (`$MFT`), resolving fallback caused by unextracted MFT cluster runs.
+  - Enforced 4096-byte sector-aligned buffer allocations for Record 0 and volume reads, preventing `ERROR_INVALID_PARAMETER` (87) on modern Advanced Format (4Kn / 512e) NVMe SSDs.
+  - Added sparse cluster run handling in `DataRunDecoder`.
+  - Added comprehensive diagnostic logging from `WindowsAutoScanner` and `WindowsNtfsMftScanner` into `startup.log`.
+- **Toolbar & Navigation Sizing & Alignment**:
+  - Standardized all top toolbar buttons (`[Scan Drive]`, `[Browse...]`, `[Rescan]`, `[Export Report...]`, and `[Free Space]`) to an exact uniform height of 32px with centered vertical content alignment and consistent 4px corner radius, resolving button height unevenness caused by font weight variations.
+  - Expanded Drive Selector ComboBox width from 230px to 285px and locked its height to 32px to eliminate clipping of volume labels and free space information (`... free of 1.82 TB`).
+  - Standardized all navigation bar buttons (`◀ Back`, `▶ Forward`, `▲ Up`, `⌂ Home`, `[Cancel Scan]`, and address bar TextBox) to an exact uniform height of 30px with centered vertical content alignment.
 - **Unit Tests**:
-  - Comprehensive unit test suite covering `StorageAnalysisEngine` top-files min-heap, extension aggregator, `FileActionService` protected path enforcement and logging, `HtmlReportExporter` offline compliance, and `NtfsMftScanner` data run decoding, record parsing, and fallback orchestration (33 tests passing).
-- **Standalone Portable Release**:
-  - Zero-prerequisite single-file executable for Windows x64 (`StorageVisualiser-win-x64.zip`).
-
-### Fixed
-- **Window Sizing & Spacious Default Layout**: Increased default window dimensions to 1260x800 (minimum 960x540) to prevent toolbar controls from crowding or clipping on high-DPI laptop displays and standard desktop monitors.
-- **Streamlined Toolbar**: Consolidated redundant rescan buttons into a single smart `Rescan` command, polished `Export Report...` button typography, and reduced ComboBox width to guarantee ample breathing room across all screen resolutions.
-- **Top Files DataGrid Headers**: Expanded the `Extension` column width to 115px to prevent header truncation (`Extensic`) and balanced `Size` (110px) and `Date Modified` (150px).
-- **HTML Export Canvas Crispness**: Eliminated text blurriness by rendering on exact integer pixel coordinates, implementing high-DPI canvas scaling (`ctx.scale(dpr, dpr)`), and avoiding canvas `maxWidth` font squashing.
-- **Recursive Bisection Treemap for HTML**: Upgraded HTML canvas treemap layout to recursive bisection, preventing razor-thin slats and bottom clipping.
-- **Interactive Clickable Breadcrumbs**: Transformed HTML export breadcrumb path into clean, clickable navigation segments (`Home › Drive › Subfolder`) and fixed duplicate root breadcrumbs upon header double-click.
-- **Clutter Elimination in Reports**: Fixed exporter `<Other>` grouping threshold to group all sub-threshold items without forcing the first 20 tiny items into microscopic slivers.
+  - Expanded test suite to 35 unit tests with coverage for MFT sparse run decoding and Record 0 non-resident `$DATA` cluster run parsing.

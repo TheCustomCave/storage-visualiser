@@ -29,14 +29,17 @@
                     <TextBlock Text="Drive:" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13" Foreground="#1F2937" />
                     <ComboBox ItemsSource="{Binding Drives}"
                               SelectedItem="{Binding SelectedDrive}"
-                              Width="230"
+                              Width="285"
+                              Height="32"
+                              VerticalContentAlignment="Center"
+                              CornerRadius="4"
                               Background="White"
                               Foreground="#111111"
                               BorderBrush="#D1D5DB"
                               IsEnabled="{Binding !IsScanning}">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding DisplayText}" Foreground="#111111" />
+                                <TextBlock Text="{Binding DisplayText}" Foreground="#111111" VerticalAlignment="Center" />
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
@@ -44,7 +47,10 @@
                             Command="{Binding StartDriveScanCommand}"
                             IsEnabled="{Binding !IsScanning}"
                             FontWeight="SemiBold"
-                            Padding="12,5" />
+                            Height="32"
+                            VerticalContentAlignment="Center"
+                            CornerRadius="4"
+                            Padding="14,0" />
                 </StackPanel>
 
                 <!-- Folder & Rescan Buttons -->
@@ -52,12 +58,18 @@
                     <Button Content="Browse..."
                             Click="OnBrowseFolderClicked"
                             IsEnabled="{Binding !IsScanning}"
-                            Padding="10,5"
+                            Height="32"
+                            VerticalContentAlignment="Center"
+                            CornerRadius="4"
+                            Padding="12,0"
                             ToolTip.Tip="Browse and scan a folder" />
                     <Button Content="Rescan"
                             Command="{Binding RescanCommand}"
                             IsEnabled="{Binding !IsScanning}"
-                            Padding="10,5"
+                            Height="32"
+                            VerticalContentAlignment="Center"
+                            CornerRadius="4"
+                            Padding="12,0"
                             ToolTip.Tip="Rescan the current drive or folder" />
                 </StackPanel>
 
@@ -66,7 +78,10 @@
                     <Button Content="Export Report..."
                             Click="OnExportReportClicked"
                             IsEnabled="{Binding CanExport}"
-                            Padding="11,5"
+                            Height="32"
+                            VerticalContentAlignment="Center"
+                            CornerRadius="4"
+                            Padding="12,0"
                             FontWeight="Medium"
                             ToolTip.Tip="Export an interactive, self-contained HTML storage report" />
                 </StackPanel>
@@ -75,12 +90,15 @@
                 <ToggleButton Grid.Column="4"
                               Content="Free Space"
                               IsChecked="{Binding ShowFreeSpace}"
+                              Height="32"
+                              VerticalContentAlignment="Center"
+                              CornerRadius="4"
                               Margin="0,0,12,0"
-                              Padding="10,5"
+                              Padding="12,0"
                               ToolTip.Tip="Toggle display of drive free space on/off" />
 
                 <!-- Detail Slider (SpaceMonger clutter control) -->
-                <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Height="32">
                     <TextBlock Text="Detail:" VerticalAlignment="Center" FontSize="12" FontWeight="Medium" Foreground="#374151" />
                     <Slider Minimum="1" Maximum="5"
                             Value="{Binding DetailLevel}"
@@ -106,10 +124,12 @@
                 <Button Grid.Column="2" Content="Scan Network Share"
                         Command="{Binding ConfirmNetworkScanCommand}"
                         Background="#D97706" Foreground="White" FontWeight="SemiBold"
-                        Padding="12,4" Margin="10,0,6,0" />
+                        Height="30" VerticalContentAlignment="Center" CornerRadius="4"
+                        Padding="12,0" Margin="10,0,6,0" />
                 <Button Grid.Column="3" Content="Cancel"
                         Command="{Binding DismissNetworkWarningCommand}"
-                        Padding="10,4" />
+                        Height="30" VerticalContentAlignment="Center" CornerRadius="4"
+                        Padding="10,0" />
             </Grid>
         </Border>
 
@@ -121,23 +141,31 @@
                     <Button Grid.Column="0" Content="◀ Back"
                             Command="{Binding NavigateBackCommand}"
                             IsEnabled="{Binding CanNavigateBack}"
-                            Width="88" HorizontalContentAlignment="Center"
-                            Padding="0,5" Margin="0,0,6,0" />
+                            Width="88" Height="30"
+                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                            CornerRadius="4"
+                            Padding="0,0" Margin="0,0,6,0" />
                     <Button Grid.Column="1" Content="▶ Forward"
                             Command="{Binding NavigateForwardCommand}"
                             IsEnabled="{Binding CanNavigateForward}"
-                            Width="88" HorizontalContentAlignment="Center"
-                            Padding="0,5" Margin="0,0,6,0" />
+                            Width="88" Height="30"
+                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                            CornerRadius="4"
+                            Padding="0,0" Margin="0,0,6,0" />
                     <Button Grid.Column="2" Content="▲ Up"
                             Command="{Binding NavigateUpCommand}"
                             IsEnabled="{Binding CanNavigateUp}"
-                            Width="65" HorizontalContentAlignment="Center"
-                            Padding="0,5" Margin="0,0,6,0" />
+                            Width="65" Height="30"
+                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                            CornerRadius="4"
+                            Padding="0,0" Margin="0,0,6,0" />
                     <Button Grid.Column="3" Content="⌂ Home"
                             Command="{Binding NavigateHomeCommand}"
                             IsEnabled="{Binding CanNavigateUp}"
-                            Width="70" HorizontalContentAlignment="Center"
-                            Padding="0,5" Margin="0,0,8,0" />
+                            Width="70" Height="30"
+                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                            CornerRadius="4"
+                            Padding="0,0" Margin="0,0,8,0" />
 
                     <TextBox Grid.Column="4"
                              Text="{Binding CurrentPath, Mode=OneWay}"
@@ -145,6 +173,7 @@
                              VerticalAlignment="Center"
                              VerticalContentAlignment="Center"
                              Height="30"
+                             CornerRadius="4"
                              Background="White"
                              Foreground="#111111"
                              BorderBrush="#D1D5DB"
@@ -161,7 +190,10 @@
                             Background="#DC2626"
                             Foreground="White"
                             FontWeight="SemiBold"
-                            Padding="12,5"
+                            Height="30"
+                            VerticalContentAlignment="Center"
+                            CornerRadius="4"
+                            Padding="12,0"
                             Margin="0,0,12,0" />
 
                     <ProgressBar Grid.Column="1"
