@@ -5,7 +5,7 @@ All notable changes to Storage Visualiser are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0-alpha] - 2026-10-05
+## [0.1.1-alpha] - 2026-10-05
 
 ### Added
 - **File Type Filtering Across Map, Tree, and Top Files (GitHub #3)**:
@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Resolved an issue where pressing "Up" in the HTML report treemap returned all the way to root instead of the immediate parent folder. Pre-linked parent references on load and bound "Up" to `currentNode.parent` while ensuring breadcrumb ancestry paths remain 100% accurate at every depth.
 - **Top Files Date Modified Column Clipping (GitHub #4)**:
   - Expanded the Date Modified column width to 180px with dedicated right-hand cell padding (`Margin="8,0,20,0"`), preventing text clipping from the DataGrid border and vertical scrollbar gutter. Added sorting by actual date (`LastModified`) instead of string text.
+
+## [0.1.0-alpha] - 2026-10-05
+
+### Added
 - **True Single-File Executable Packaging**:
   - Configured `PublishSingleFile`, `IncludeNativeLibrariesForSelfExtract`, and `EnableCompressionInSingleFile` in project settings. Release builds now produce a clean, 100% standalone `StorageVisualiser.exe` with zero loose DLLs or framework runtime files in the publish output.
 - **Custom High-Performance PercentageBar Control**:
