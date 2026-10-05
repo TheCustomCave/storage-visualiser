@@ -521,9 +521,19 @@ const reportData =
 
 // State
 let currentNode = reportData.treeRoot;
-const navHistory = [];
 let hoveredBox = null;
 let currentBoxes = [];
+
+// Initialize parent references so breadcrumbs and Up navigation work accurately from any depth
+function linkParents(node, parent) {
+  node.parent = parent;
+  if (node.c) {
+    for (let i = 0; i < node.c.length; i++) {
+      linkParents(node.c[i], node);
+    }
+  }
+}
+linkParents(reportData.treeRoot, null);
 
 const palette = [
   { c: "#FFEBE8", h: "#FF7060" },
@@ -608,22 +618,21 @@ function renderBreadcrumbs() {
   container.innerHTML = '';
 
   const crumbs = [];
-  for (let i = 0; i < navHistory.length; i++) {
-    crumbs.push({ name: navHistory[i].n, node: navHistory[i], index: i });
+  let curr = currentNode;
+  while (curr) {
+    crumbs.unshift(curr);
+    curr = curr.parent;
   }
-  crumbs.push({ name: currentNode.n, node: currentNode, index: -1 });
 
   for (let i = 0; i < crumbs.length; i++) {
-    const c = crumbs[i];
+    const targetNode = crumbs[i];
     const isLast = i === crumbs.length - 1;
     const span = document.createElement('span');
     span.className = isLast ? 'crumb active' : 'crumb';
-    span.textContent = c.name;
+    span.textContent = targetNode.n;
     if (!isLast) {
       span.onclick = () => {
-        const target = navHistory[c.index];
-        navHistory.length = c.index;
-        currentNode = target;
+        currentNode = targetNode;
         renderTreemap();
       };
     }
@@ -639,15 +648,14 @@ function renderBreadcrumbs() {
 }
 
 function navigateUp() {
-  if (navHistory.length > 0) {
-    currentNode = navHistory.pop();
+  if (currentNode && currentNode.parent) {
+    currentNode = currentNode.parent;
     renderTreemap();
   }
 }
 
 function navigateHome() {
-  if (navHistory.length > 0) {
-    navHistory.length = 0;
+  if (currentNode !== reportData.treeRoot) {
     currentNode = reportData.treeRoot;
     renderTreemap();
   }
@@ -802,7 +810,6 @@ canvas.addEventListener('dblclick', e => {
     const b = currentBoxes[i];
     if (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h) {
       if (b.node.k === 1 && b.node.c && b.node.c.length > 0 && b.node !== currentNode) {
-        navHistory.push(currentNode);
         currentNode = b.node;
         renderTreemap();
       }
@@ -850,6 +857,16 @@ function populateFileTypes() {
   tbody.innerHTML = '';
   reportData.fileTypes.forEach(t => {
     const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
+    tr.title = 'Click to show matching files in Top Files tab';
+    tr.onclick = () => {
+      switchTab('top');
+      const searchBox = document.getElementById('top-search');
+      if (searchBox) {
+        searchBox.value = t.extension;
+        filterTopFiles();
+      }
+    };
     tr.innerHTML = `
       <td><strong>${escapeHtml(t.extension)}</strong></td>
       <td>${escapeHtml(t.category)}</td>

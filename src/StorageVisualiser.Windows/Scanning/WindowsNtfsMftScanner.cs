@@ -125,6 +125,8 @@ public sealed class WindowsNtfsMftScanner : IScanner
         long totalBytesScanned = 0;
         long lastReportMs = 0;
         ulong currentRecordIndex = 0;
+        long liveFileCount = 0;
+        long liveDirCount = 0;
 
         const int bufferSize = 2 * 1024 * 1024; // 2 MB sequential buffer
         byte[] readBuffer = ArrayPool<byte>.Shared.Rent(bufferSize);
@@ -163,6 +165,14 @@ public sealed class WindowsNtfsMftScanner : IScanner
                         if (NtfsMftRecordParser.TryParseRecord(recordSlice, rIndex, out var parsed))
                         {
                             records[rIndex] = parsed;
+                            if (parsed.IsDirectory)
+                            {
+                                liveDirCount++;
+                            }
+                            else
+                            {
+                                liveFileCount++;
+                            }
                         }
                     }
 
@@ -175,10 +185,10 @@ public sealed class WindowsNtfsMftScanner : IScanner
                     {
                         lastReportMs = stopwatch.ElapsedMilliseconds;
                         progress.Report(new ScanProgress(
-                            records.Count,
-                            0,
+                            liveFileCount,
+                            liveDirCount,
                             totalBytesScanned,
-                            $"{records.Count:N0} MFT records read",
+                            $"{liveFileCount + liveDirCount:N0} MFT records read",
                             stopwatch.Elapsed));
                     }
                 }
@@ -188,6 +198,13 @@ public sealed class WindowsNtfsMftScanner : IScanner
         {
             ArrayPool<byte>.Shared.Return(readBuffer);
         }
+
+        progress?.Report(new ScanProgress(
+            liveFileCount,
+            liveDirCount,
+            totalBytesScanned,
+            "Assembling directory tree...",
+            stopwatch.Elapsed));
 
         // 3. Assemble StorageNode directory tree
         var rootNode = new StorageNode

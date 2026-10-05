@@ -8,17 +8,30 @@ namespace StorageVisualiser.Core.Analysis;
 
 public static class StorageAnalysisEngine
 {
-    public static List<TopFileItem> GetTopFiles(StorageNode root, int limit = 200)
+    public static List<TopFileItem> GetTopFiles(StorageNode root, int limit = 200, string? extensionFilter = null)
     {
         if (root == null || limit <= 0) return [];
 
         var minHeap = new PriorityQueue<StorageNode, long>();
         var totalRootSize = Math.Max(1, root.Size);
+        var filterNorm = !string.IsNullOrWhiteSpace(extensionFilter)
+            ? (extensionFilter.StartsWith('.') ? extensionFilter.ToLowerInvariant() : (extensionFilter == "(none)" ? "(none)" : "." + extensionFilter.ToLowerInvariant()))
+            : null;
 
         void CollectFiles(StorageNode node)
         {
             if (node.Kind == StorageItemKind.File)
             {
+                if (filterNorm != null)
+                {
+                    var ext = Path.GetExtension(node.Name);
+                    var norm = string.IsNullOrEmpty(ext) ? "(none)" : ext.ToLowerInvariant();
+                    if (!string.Equals(norm, filterNorm, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return;
+                    }
+                }
+
                 if (minHeap.Count < limit)
                 {
                     minHeap.Enqueue(node, node.Size);

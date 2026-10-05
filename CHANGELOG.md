@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0-alpha] - 2026-10-05
 
 ### Added
+- **File Type Filtering Across Map, Tree, and Top Files (GitHub #3)**:
+  - Added context menu actions to the File Types tab: **"Filter Map & Tree by this Type"**, **"Filter Tree by this Type"**, and **"Show Top Files for this Type"**. Double-clicking any file type row immediately filters the Map and Tree views.
+  - Added a responsive **Active Filter Indicator Banner** across the application displaying the active filter (`*.ext`), matching file count, total size, and a one-click **"✕ Clear Filter"** button.
+  - Tree view shows only folders containing matching files (with matching counts/sizes) and the matching files themselves.
+  - Treemap dynamically resizes folders and files according to their matching extension sizes.
+  - Top Files tab displays the largest files matching the active filter.
+- **HTML Report File Types Interaction (GitHub #3)**:
+  - Clicking any row in the HTML report File Types table automatically switches to the Top Files tab and filters the search by that file extension.
+
+### Fixed
+- **NTFS MFT Scanner Directory Count Zero (GitHub #1)**:
+  - Fixed live scan progress reporting during elevated NTFS MFT scans where directory count was hardcoded to 0 while file count incremented. Live counters now track both files and directories simultaneously.
+- **HTML Report "Up" Navigation (GitHub #2)**:
+  - Resolved an issue where pressing "Up" in the HTML report treemap returned all the way to root instead of the immediate parent folder. Pre-linked parent references on load and bound "Up" to `currentNode.parent` while ensuring breadcrumb ancestry paths remain 100% accurate at every depth.
+- **Top Files Date Modified Column Clipping (GitHub #4)**:
+  - Expanded the Date Modified column width to 180px with dedicated right-hand cell padding (`Margin="8,0,20,0"`), preventing text clipping from the DataGrid border and vertical scrollbar gutter. Added sorting by actual date (`LastModified`) instead of string text.
 - **True Single-File Executable Packaging**:
   - Configured `PublishSingleFile`, `IncludeNativeLibrariesForSelfExtract`, and `EnableCompressionInSingleFile` in project settings. Release builds now produce a clean, 100% standalone `StorageVisualiser.exe` with zero loose DLLs or framework runtime files in the publish output.
 - **Custom High-Performance PercentageBar Control**:

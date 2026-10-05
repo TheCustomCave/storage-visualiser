@@ -171,6 +171,11 @@ public partial class MainWindow : Window
         _vm.OpenInExplorer();
     }
 
+    private void OnFileTypeDoubleTapped(object? sender, RoutedEventArgs e)
+    {
+        _vm.FilterBySelectedFileType();
+    }
+
     private static readonly string[] HtmlPatterns = ["*.html"];
     private static readonly string[] HtmlMimeTypes = ["text/html"];
 

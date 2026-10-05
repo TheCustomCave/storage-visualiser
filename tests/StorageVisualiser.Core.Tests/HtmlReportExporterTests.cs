@@ -72,4 +72,19 @@ public class HtmlReportExporterTests
         // System.Text.Json default encoder safely escapes < and > and & in json strings
         html.ShouldContain(@"file\u003Cscript\u003Ealert(1)\u003C/script\u003E");
     }
+
+    [Fact]
+    public void ExportToHtml_IncludesParentLinkingAndUpNavigationScript()
+    {
+        var root = new StorageNode { Name = "C:\\", Kind = StorageItemKind.Directory, Size = 1_000 };
+        var html = HtmlReportExporter.ExportToHtml(root, "C:\\", scanDuration: "00:01");
+
+        // Verify parent linking function is present
+        html.ShouldContain("function linkParents(node, parent)");
+        html.ShouldContain("linkParents(reportData.treeRoot, null);");
+        // Verify Up navigation uses parent reference rather than popping history directly to root
+        html.ShouldContain("currentNode.parent");
+        html.ShouldContain("function navigateUp()");
+    }
 }
+

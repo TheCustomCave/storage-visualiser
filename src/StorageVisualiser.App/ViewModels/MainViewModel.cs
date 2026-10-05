@@ -191,6 +191,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     [ObservableProperty]
+    private string? _activeExtensionFilter;
+
+    [ObservableProperty]
+    private bool _hasActiveFilter;
+
+    [ObservableProperty]
+    private string _activeFilterDescription = string.Empty;
+
+    [ObservableProperty]
     private bool _canNavigateBack;
 
     [ObservableProperty]
@@ -355,6 +364,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _scanCts = new CancellationTokenSource();
         IsScanning = true;
         CanExport = false;
+        ActiveExtensionFilter = null;
+        HasActiveFilter = false;
+        ActiveFilterDescription = string.Empty;
+        StorageNode.ActiveExtensionFilter = null;
         StatusText = $"Scanning '{path}'...";
         ScanProgressText = "Starting scan...";
         CurrentScanningDirectory = path;
@@ -763,6 +776,78 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
 
         PendingDeleteNode = null;
+    }
+
+    [RelayCommand]
+    public void FilterByExtension(string? extension)
+    {
+        if (RootNode == null) return;
+
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            ActiveExtensionFilter = null;
+            HasActiveFilter = false;
+            ActiveFilterDescription = string.Empty;
+            StorageNode.ActiveExtensionFilter = null;
+            StorageNode.UpdateFilterMatching(RootNode, null);
+            TopFiles = new ObservableCollection<TopFileItem>(StorageAnalysisEngine.GetTopFiles(RootNode, 200));
+            StatusText = "Cleared file type filter.";
+        }
+        else
+        {
+            var filterNorm = extension.StartsWith('.') ? extension.ToLowerInvariant() : (extension == "(none)" ? "(none)" : "." + extension.ToLowerInvariant());
+            ActiveExtensionFilter = filterNorm;
+            HasActiveFilter = true;
+            StorageNode.ActiveExtensionFilter = filterNorm;
+            var res = StorageNode.UpdateFilterMatching(RootNode, filterNorm);
+            ActiveFilterDescription = $"{filterNorm} ({res.MatchingCount:N0} files, {SizeFormatter.Format(res.MatchingSize)})";
+            TopFiles = new ObservableCollection<TopFileItem>(StorageAnalysisEngine.GetTopFiles(RootNode, 200, filterNorm));
+            StatusText = $"Filtered by {ActiveFilterDescription}.";
+        }
+
+        RootNode.NotifyPercentageChanged();
+        if (TreeRoots.Count > 0)
+        {
+            var r = TreeRoots[0];
+            TreeRoots = [r];
+        }
+        RecomputeLayout(lastWidth, lastHeight);
+    }
+
+    [RelayCommand]
+    public void ClearFilter()
+    {
+        FilterByExtension(null);
+    }
+
+    [RelayCommand]
+    public void FilterBySelectedFileType()
+    {
+        if (SelectedFileType != null)
+        {
+            FilterByExtension(SelectedFileType.Extension);
+            SelectedTabIndex = 0; // Switch to Map
+        }
+    }
+
+    [RelayCommand]
+    public void FilterTreeBySelectedFileType()
+    {
+        if (SelectedFileType != null)
+        {
+            FilterByExtension(SelectedFileType.Extension);
+            SelectedTabIndex = 1; // Switch to Tree tab
+        }
+    }
+
+    [RelayCommand]
+    public void ShowTopFilesForSelectedFileType()
+    {
+        if (SelectedFileType != null)
+        {
+            FilterByExtension(SelectedFileType.Extension);
+            SelectedTabIndex = 2; // Switch to Top Files tab
+        }
     }
 
     public async Task ExportHtmlReportAsync(string targetFilePath)

@@ -25,7 +25,7 @@
         <KeyBinding Gesture="F5" Command="{Binding RescanCommand}" />
     </Window.KeyBindings>
 
-    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
         <!-- Top Toolbar -->
         <Border Grid.Row="0" Background="#F3F4F6" BorderBrush="#D1D5DB" BorderThickness="0,0,0,1" Padding="12,6">
             <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
@@ -225,8 +225,35 @@
             </Panel>
         </Border>
 
+        <!-- Active Filter Indicator Banner -->
+        <Border Grid.Row="3"
+                Background="#EFF6FF"
+                BorderBrush="#BFDBFE"
+                BorderThickness="0,0,0,1"
+                Padding="14,6"
+                IsVisible="{Binding HasActiveFilter}">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <TextBlock Text="🔍 Filtered by:" FontWeight="Bold" FontSize="12" Foreground="#1E40AF" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding ActiveFilterDescription}" FontWeight="SemiBold" FontSize="12" Foreground="#1D4ED8" VerticalAlignment="Center" />
+                </StackPanel>
+                <Button Grid.Column="2"
+                        Content="✕ Clear Filter"
+                        Command="{Binding ClearFilterCommand}"
+                        Background="#DBEAFE"
+                        Foreground="#1E40AF"
+                        BorderBrush="#93C5FD"
+                        BorderThickness="1"
+                        Padding="10,3"
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        CornerRadius="4"
+                        VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
         <!-- Tab Views: Map, Tree, Top Files, File Types -->
-        <TabControl Grid.Row="3"
+        <TabControl Grid.Row="4"
                     SelectedIndex="{Binding SelectedTabIndex}"
                     Margin="0"
                     Padding="0">
@@ -367,7 +394,16 @@
                             </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Extension" x:DataType="analysis:TopFileItem" Binding="{Binding Extension}" Width="115" />
                             <DataGridTextColumn Header="Folder Path" x:DataType="analysis:TopFileItem" Binding="{Binding FullPath}" Width="*" />
-                            <DataGridTextColumn Header="Date Modified" x:DataType="analysis:TopFileItem" Binding="{Binding FormattedModified}" Width="150" />
+                            <DataGridTemplateColumn Header="Date Modified" Width="180" SortMemberPath="LastModified">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="analysis:TopFileItem">
+                                        <TextBlock Text="{Binding FormattedModified}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="8,0,20,0"
+                                                   Foreground="#4B5563" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                         </DataGrid.Columns>
                         <DataGrid.ContextMenu>
                             <ContextMenu>
@@ -390,7 +426,7 @@
             <TabItem Header="📊 File Types">
                 <Grid RowDefinitions="Auto,*">
                     <Border Grid.Row="0" Background="#F3F4F6" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="12,6">
-                        <TextBlock Text="File Extension &amp; Category Breakdown (Sorted by total storage descending)"
+                        <TextBlock Text="File Extension &amp; Category Breakdown (Sorted by total storage descending. Right-click or double-click to filter)"
                                    FontSize="12" Foreground="#4B5563" FontWeight="Medium" />
                     </Border>
 
@@ -403,7 +439,8 @@
                               CanUserResizeColumns="True"
                               GridLinesVisibility="Horizontal"
                               BorderThickness="0"
-                              Background="White">
+                              Background="White"
+                              DoubleTapped="OnFileTypeDoubleTapped">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Extension" x:DataType="analysis:FileTypeSummary" Binding="{Binding Extension}" Width="120" />
                             <DataGridTextColumn Header="Category" x:DataType="analysis:FileTypeSummary" Binding="{Binding Category}" Width="180" />
@@ -418,15 +455,32 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="File Count" x:DataType="analysis:FileTypeSummary" Binding="{Binding FormattedFileCount}" Width="120" />
+                            <DataGridTemplateColumn Header="File Count" Width="140" SortMemberPath="FileCount">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="analysis:FileTypeSummary">
+                                        <TextBlock Text="{Binding FormattedFileCount}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="8,0,16,0" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                         </DataGrid.Columns>
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Filter Map &amp; Tree by this Type" Command="{Binding FilterBySelectedFileTypeCommand}" />
+                                <MenuItem Header="Filter Tree by this Type" Command="{Binding FilterTreeBySelectedFileTypeCommand}" />
+                                <MenuItem Header="Show Top Files for this Type" Command="{Binding ShowTopFilesForSelectedFileTypeCommand}" />
+                                <Separator IsVisible="{Binding HasActiveFilter}" />
+                                <MenuItem Header="Clear Filter" Command="{Binding ClearFilterCommand}" IsVisible="{Binding HasActiveFilter}" />
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
                     </DataGrid>
                 </Grid>
             </TabItem>
         </TabControl>
 
         <!-- Status Bar -->
-        <Border Grid.Row="4" Background="#E5E7EB" BorderBrush="#D1D5DB" BorderThickness="0,1,0,0" Padding="10,5">
+        <Border Grid.Row="5" Background="#E5E7EB" BorderBrush="#D1D5DB" BorderThickness="0,1,0,0" Padding="10,5">
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <TextBlock Grid.Column="0"
                            Text="{Binding StatusText}"
@@ -444,7 +498,7 @@
         </Border>
 
         <!-- Delete Confirmation / Protected Warning Modal Overlay -->
-        <Border Grid.Row="0" Grid.RowSpan="5"
+        <Border Grid.Row="0" Grid.RowSpan="6"
                 Background="#66000000"
                 IsVisible="{Binding IsDeleteConfirmationVisible}">
             <Border Background="White"

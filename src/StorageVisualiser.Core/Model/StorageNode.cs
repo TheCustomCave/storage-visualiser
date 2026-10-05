@@ -45,16 +45,86 @@ public sealed class StorageNode : INotifyPropertyChanged
     public List<StorageNode> Children => _children ??= [];
     public bool HasChildren => _children != null && _children.Count > 0;
     public static bool ShowFreeSpaceInTree { get; set; } = true;
+    public static string? ActiveExtensionFilter { get; set; }
+
+    public bool MatchesFilter { get; set; } = true;
+    public long MatchingSize { get; set; }
+    public int MatchingFileCount { get; set; }
+
+    public static (bool Matches, long MatchingSize, int MatchingCount) UpdateFilterMatching(StorageNode node, string? ext)
+    {
+        if (string.IsNullOrWhiteSpace(ext))
+        {
+            node.MatchesFilter = true;
+            node.MatchingSize = node.Size;
+            node.MatchingFileCount = node.FileCount;
+            if (node.HasChildren)
+            {
+                foreach (var child in node.Children)
+                {
+                    UpdateFilterMatching(child, null);
+                }
+            }
+            return (true, node.Size, node.FileCount);
+        }
+
+        if (node.Kind == StorageItemKind.DriveFreeSpace)
+        {
+            node.MatchesFilter = false;
+            node.MatchingSize = 0;
+            node.MatchingFileCount = 0;
+            return (false, 0, 0);
+        }
+
+        if (node.Kind == StorageItemKind.File)
+        {
+            var nodeExt = System.IO.Path.GetExtension(node.Name);
+            var normalized = string.IsNullOrEmpty(nodeExt) ? "(none)" : nodeExt.ToLowerInvariant();
+            var filterNorm = ext.StartsWith('.') ? ext.ToLowerInvariant() : (ext == "(none)" ? "(none)" : "." + ext.ToLowerInvariant());
+            bool matches = string.Equals(normalized, filterNorm, StringComparison.OrdinalIgnoreCase);
+            node.MatchesFilter = matches;
+            node.MatchingSize = matches ? node.Size : 0;
+            node.MatchingFileCount = matches ? 1 : 0;
+            return (matches, node.MatchingSize, node.MatchingFileCount);
+        }
+
+        long sumSize = 0;
+        int sumCount = 0;
+        bool anyMatches = false;
+        if (node.HasChildren)
+        {
+            foreach (var child in node.Children)
+            {
+                var res = UpdateFilterMatching(child, ext);
+                if (res.Matches)
+                {
+                    anyMatches = true;
+                    sumSize += res.MatchingSize;
+                    sumCount += res.MatchingCount;
+                }
+            }
+        }
+        node.MatchesFilter = anyMatches;
+        node.MatchingSize = sumSize;
+        node.MatchingFileCount = sumCount;
+        return (anyMatches, sumSize, sumCount);
+    }
 
     public IEnumerable<StorageNode> SortedChildren
     {
         get
         {
             if (_children == null) return [];
-            var items = ShowFreeSpaceInTree
-                ? (IEnumerable<StorageNode>)_children
-                : System.Linq.Enumerable.Where(_children, c => c.Kind != StorageItemKind.DriveFreeSpace);
-            return System.Linq.Enumerable.OrderByDescending(items, c => c.Size);
+            var items = (IEnumerable<StorageNode>)_children;
+            if (!ShowFreeSpaceInTree)
+            {
+                items = System.Linq.Enumerable.Where(items, c => c.Kind != StorageItemKind.DriveFreeSpace);
+            }
+            if (!string.IsNullOrWhiteSpace(ActiveExtensionFilter))
+            {
+                items = System.Linq.Enumerable.Where(items, c => c.MatchesFilter);
+            }
+            return System.Linq.Enumerable.OrderByDescending(items, c => !string.IsNullOrWhiteSpace(ActiveExtensionFilter) ? c.MatchingSize : c.Size);
         }
     }
 
@@ -127,6 +197,11 @@ public sealed class StorageNode : INotifyPropertyChanged
     {
         get
         {
+            if (!string.IsNullOrWhiteSpace(ActiveExtensionFilter) && Kind == StorageItemKind.Directory)
+            {
+                return $"{Formatting.SizeFormatter.Format(MatchingSize)} ({MatchingFileCount:N0} files matching {ActiveExtensionFilter})";
+            }
+
             if (Parent == null && IsRootDrive && RootDriveCapacity > 0)
             {
                 return $"{FormattedSize} used of {Formatting.SizeFormatter.Format(RootDriveCapacity)}";
@@ -160,6 +235,8 @@ public sealed class StorageNode : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentTreePercentage)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FormattedPercentage)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TreePercentageTooltip)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FormattedDisplaySize)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SortedChildren)));
         if (_children != null)
         {
             foreach (var child in _children)

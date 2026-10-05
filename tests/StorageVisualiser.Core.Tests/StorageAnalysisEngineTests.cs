@@ -206,4 +206,73 @@ public class StorageAnalysisEngineTests
         drillDownLayout.Node.ShouldBe(otherItem.Node);
         drillDownLayout.Children.Count.ShouldBeGreaterThan(0);
     }
+
+    [Fact]
+    public void GetTopFiles_WithExtensionFilter_ReturnsOnlyMatchingFiles()
+    {
+        var root = new StorageNode { Name = @"C:\Data", Kind = StorageItemKind.Directory, Size = 100_000 };
+        var file1 = new StorageNode { Name = "movie.mp4", Kind = StorageItemKind.File, Size = 40_000 };
+        var file2 = new StorageNode { Name = "song.mp3", Kind = StorageItemKind.File, Size = 30_000 };
+        var file3 = new StorageNode { Name = "clip.MP4", Kind = StorageItemKind.File, Size = 20_000 };
+        var file4 = new StorageNode { Name = "notes.txt", Kind = StorageItemKind.File, Size = 10_000 };
+
+        root.AddChild(file1);
+        root.AddChild(file2);
+        root.AddChild(file3);
+        root.AddChild(file4);
+
+        var topMp4 = StorageAnalysisEngine.GetTopFiles(root, limit: 10, extensionFilter: ".mp4");
+        topMp4.Count.ShouldBe(2);
+        topMp4[0].Name.ShouldBe("movie.mp4");
+        topMp4[1].Name.ShouldBe("clip.MP4");
+    }
+
+    [Fact]
+    public void StorageNode_UpdateFilterMatching_FiltersMatchingFilesAndDirectories()
+    {
+        var root = new StorageNode { Name = @"C:\Scan", Kind = StorageItemKind.Directory, Size = 100_000 };
+        var dirA = new StorageNode { Name = "FolderA", Kind = StorageItemKind.Directory, Size = 60_000 };
+        var dirB = new StorageNode { Name = "FolderB", Kind = StorageItemKind.Directory, Size = 40_000 };
+        root.AddChild(dirA);
+        root.AddChild(dirB);
+
+        var mp4File = new StorageNode { Name = "video.mp4", Kind = StorageItemKind.File, Size = 50_000 };
+        var txtFileA = new StorageNode { Name = "readme.txt", Kind = StorageItemKind.File, Size = 10_000 };
+        var txtFileB = new StorageNode { Name = "doc.txt", Kind = StorageItemKind.File, Size = 40_000 };
+
+        dirA.AddChild(mp4File);
+        dirA.AddChild(txtFileA);
+        dirB.AddChild(txtFileB);
+
+        // Filter by .mp4
+        var res = StorageNode.UpdateFilterMatching(root, ".mp4");
+        res.Matches.ShouldBeTrue();
+        res.MatchingCount.ShouldBe(1);
+        res.MatchingSize.ShouldBe(50_000);
+
+        dirA.MatchesFilter.ShouldBeTrue();
+        dirA.MatchingSize.ShouldBe(50_000);
+        dirA.MatchingFileCount.ShouldBe(1);
+
+        dirB.MatchesFilter.ShouldBeFalse();
+        dirB.MatchingSize.ShouldBe(0);
+
+        // Check SortedChildren with ActiveExtensionFilter
+        StorageNode.ActiveExtensionFilter = ".mp4";
+        try
+        {
+            var rootChildren = root.SortedChildren.ToList();
+            rootChildren.Count.ShouldBe(1);
+            rootChildren[0].ShouldBe(dirA);
+
+            var dirAChildren = dirA.SortedChildren.ToList();
+            dirAChildren.Count.ShouldBe(1);
+            dirAChildren[0].ShouldBe(mp4File);
+        }
+        finally
+        {
+            StorageNode.ActiveExtensionFilter = null;
+            StorageNode.UpdateFilterMatching(root, null);
+        }
+    }
 }

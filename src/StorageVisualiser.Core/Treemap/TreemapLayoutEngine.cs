@@ -22,7 +22,9 @@ public sealed class TreemapLayoutEngine
     }
 
     private static long GetNodeSize(StorageNode node, bool useAllocated) =>
-        useAllocated ? node.AllocatedSize : node.Size;
+        !string.IsNullOrWhiteSpace(StorageNode.ActiveExtensionFilter)
+            ? node.MatchingSize
+            : (useAllocated ? node.AllocatedSize : node.Size);
 
     private void LayoutFolderContent(TreemapItem folderItem, LayoutRect availableBounds, int depth, TreemapOptions options)
     {
@@ -76,7 +78,9 @@ public sealed class TreemapLayoutEngine
         }
 
         // Collect and filter children
-        var rawChildren = node.Children;
+        var rawChildren = !string.IsNullOrWhiteSpace(StorageNode.ActiveExtensionFilter)
+            ? (IEnumerable<StorageNode>)node.Children.Where(c => c.MatchesFilter)
+            : node.Children;
         var totalChildSize = rawChildren.Sum(c => Math.Max(0, GetNodeSize(c, options.UseAllocatedSize)));
         if (totalChildSize <= 0)
         {
