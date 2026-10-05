@@ -29,10 +29,11 @@ A modern, ultra-fast, portable disk-space visualiser for Windows, inspired by th
   - Export full interactive storage reports into a single standalone HTML5 file.
   - Features an offline canvas treemap, search filtering, breadcrumb navigation, and breakdown tables.
   - **Strictly offline**: Zero external scripts, remote fonts, or network telemetry.
-- **🖱️ Shell & Navigation Integration**:
-  - Deep drill-down (double click), Breadcrumb bar, `Back` / `Forward` / `Up` / `Home`.
-  - **Drag and Drop**: Drag any folder or drive from Windows Explorer straight into the window to scan.
-  - Right-click context menu: *Open in Explorer (item selected)*, *Open*, *Copy Path*, *File Properties*, and *Show on Map*.
+- **🖱️ Explorer & Navigation Integration**:
+  - **Reveal in Explorer**: Right-click any item across Map, Tree, or Top Files tabs to open its containing folder in Windows Explorer with the exact file or directory selected.
+  - **Native File Properties**: Launch the native Windows shell properties dialog for any scanned file, folder, or drive.
+  - **Drag and Drop Scanning**: Drag any folder or drive directly from Windows Explorer into the application to start scanning.
+  - **Fluid Drill-Down Navigation**: Double-click to zoom into folders, interactive breadcrumb navigation bar, and full history traversal (`Back` / `Forward` / `Up` / `Home`).
 - **♿ WCAG AAA Accessibility & Visual Polish**:
   - High-contrast text labels (>10:1 contrast ratio) over soft pastel data bars.
   - Pixel-perfect integer canvas rendering and balanced toolbar heights.
