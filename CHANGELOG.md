@@ -50,5 +50,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Standardized all top toolbar buttons (`[Scan Drive]`, `[Browse...]`, `[Rescan]`, `[Export Report...]`, and `[Free Space]`) to an exact uniform height of 32px with centered vertical content alignment and consistent 4px corner radius, resolving button height unevenness caused by font weight variations.
   - Expanded Drive Selector ComboBox width from 230px to 285px and locked its height to 32px to eliminate clipping of volume labels and free space information (`... free of 1.82 TB`).
   - Standardized all navigation bar buttons (`◀ Back`, `▶ Forward`, `▲ Up`, `⌂ Home`, `[Cancel Scan]`, and address bar TextBox) to an exact uniform height of 30px with centered vertical content alignment.
+  - Fixed Detail Slider thumb clipping and vertical misalignment by overriding FluentTheme slider dimensions (`SliderPreContentMargin` and `SliderPostContentMargin` set to 0, track height 20px, thumb diameter 14px/16px) to perfectly center with `Detail:` text and prevent thumb clipping against toolbar borders.
 - **Unit Tests**:
   - Expanded test suite to 35 unit tests with coverage for MFT sparse run decoding and Record 0 non-resident `$DATA` cluster run parsing.

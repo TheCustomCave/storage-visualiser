@@ -93,16 +93,16 @@
                               Height="32"
                               VerticalContentAlignment="Center"
                               CornerRadius="4"
-                              Margin="0,0,12,0"
+                              Margin="0,0,16,0"
                               Padding="12,0"
                               ToolTip.Tip="Toggle display of drive free space on/off" />
 
                 <!-- Detail Slider (SpaceMonger clutter control) -->
-                <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Height="32">
+                <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Height="32">
                     <TextBlock Text="Detail:" VerticalAlignment="Center" FontSize="12" FontWeight="Medium" Foreground="#374151" />
                     <Slider Minimum="1" Maximum="5"
                             Value="{Binding DetailLevel}"
-                            Width="85"
+                            Width="90" Height="20"
                             IsSnapToTickEnabled="True"
                             TickFrequency="1"
                             VerticalAlignment="Center"

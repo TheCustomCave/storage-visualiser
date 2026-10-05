@@ -2,6 +2,18 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="StorageVisualiser.App.App"
              RequestedThemeVariant="Light">
+    <Application.Resources>
+        <x:Double x:Key="SliderHorizontalHeight">20</x:Double>
+        <x:Double x:Key="SliderHorizontalThumbWidth">14</x:Double>
+        <x:Double x:Key="SliderHorizontalThumbHeight">14</x:Double>
+        <x:Double x:Key="SliderHorizontalThumbWidthPointerOver">16</x:Double>
+        <x:Double x:Key="SliderHorizontalThumbHeightPointerOver">16</x:Double>
+        <x:Double x:Key="SliderHorizontalThumbWidthPressed">14</x:Double>
+        <x:Double x:Key="SliderHorizontalThumbHeightPressed">14</x:Double>
+        <CornerRadius x:Key="SliderThumbCornerRadius">8</CornerRadius>
+        <GridLength x:Key="SliderPreContentMargin">0</GridLength>
+        <GridLength x:Key="SliderPostContentMargin">0</GridLength>
+    </Application.Resources>
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
