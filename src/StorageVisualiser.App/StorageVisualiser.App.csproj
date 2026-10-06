@@ -15,7 +15,6 @@
     <Description>Portable, secure, high-speed disk space visualiser for Windows</Description>
     <Copyright>© 2026 The Custom Cave. MIT Licensed.</Copyright>
     <PublishSingleFile Condition="'$(Configuration)' == 'Release'">true</PublishSingleFile>
-    <SelfContained Condition="'$(Configuration)' == 'Release'">true</SelfContained>
     <IncludeNativeLibrariesForSelfExtract Condition="'$(Configuration)' == 'Release'">true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile Condition="'$(Configuration)' == 'Release'">true</EnableCompressionInSingleFile>
   </PropertyGroup>

@@ -27,7 +27,7 @@ jobs:
         run: dotnet restore StorageVisualiser.slnx
 
       - name: Build solution (Release)
-        run: dotnet build StorageVisualiser.slnx --configuration Release --no-restore
+        run: dotnet build StorageVisualiser.slnx --configuration Release
 
       - name: Run unit tests
         run: dotnet test StorageVisualiser.slnx --configuration Release --no-build --verbosity normal
