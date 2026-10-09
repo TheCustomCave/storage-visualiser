@@ -28,7 +28,7 @@
     <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
         <!-- Top Toolbar -->
         <Border Grid.Row="0" Background="#F3F4F6" BorderBrush="#D1D5DB" BorderThickness="0,0,0,1" Padding="12,6">
-            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto">
                 <!-- Drive Selector & Scan -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <TextBlock Text="Drive:" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13" Foreground="#1F2937" />
@@ -113,6 +113,18 @@
                             VerticalAlignment="Center"
                             ToolTip.Tip="Treemap Detail (1=Less Detail / Cleaner, 5=More Detail / Deep)" />
                 </StackPanel>
+
+                <!-- Settings Button -->
+                <Button Grid.Column="6"
+                        Content="⚙️ Settings"
+                        Command="{Binding OpenSettingsCommand}"
+                        Height="32"
+                        VerticalContentAlignment="Center"
+                        CornerRadius="4"
+                        Margin="12,0,0,0"
+                        Padding="10,0"
+                        FontWeight="Medium"
+                        ToolTip.Tip="Preferences, color themes, units, and layout options" />
             </Grid>
         </Border>
 
@@ -273,7 +285,9 @@
             <TabItem Header="🗺️ Map">
                 <controls:TreemapCanvas x:Name="CanvasControl"
                                         LayoutRoot="{Binding LayoutRoot}"
-                                        SelectedNode="{Binding SelectedNode}">
+                                        SelectedNode="{Binding SelectedNode}"
+                                        ColorMode="{Binding ColorMode}"
+                                        ColorBlindSafe="{Binding ColorBlindSafe}">
                     <controls:TreemapCanvas.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="🔍 Drill Down into Group" Command="{Binding DrillDownSelectedCommand}" IsVisible="{Binding CanDrillDownSelected}" />
@@ -571,6 +585,174 @@
                                 Padding="16,6" />
                     </StackPanel>
                 </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- Settings Modal Overlay -->
+        <Border Grid.Row="0" Grid.RowSpan="6"
+                Background="#66000000"
+                IsVisible="{Binding IsSettingsVisible}">
+            <Border Background="White"
+                    BorderBrush="#D1D5DB"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Width="560"
+                    MaxHeight="680"
+                    Padding="22"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    BoxShadow="0 15 35 #50000000">
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <!-- Title Bar -->
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <TextBlock Text="⚙️" FontSize="20" VerticalAlignment="Center" />
+                            <TextBlock Text="Settings &amp; Preferences" FontWeight="Bold" FontSize="16" Foreground="#111827" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="✕" Command="{Binding CloseSettingsCommand}" Background="Transparent" Foreground="#6B7280" BorderThickness="0" Padding="8,4" FontSize="14" />
+                    </Grid>
+
+                    <!-- Scrollable Content -->
+                    <ScrollViewer Grid.Row="1" MaxHeight="500" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="16" Margin="0,0,8,0">
+
+                            <!-- Section 1: Appearance & Colors -->
+                            <Border Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6" Padding="14">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="Appearance &amp; Colors" FontWeight="Bold" FontSize="13" Foreground="#1F2937" />
+
+                                    <Grid ColumnDefinitions="150,*">
+                                        <TextBlock Grid.Column="0" Text="Treemap Color Mode:" VerticalAlignment="Center" FontSize="12" Foreground="#4B5563" />
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding AvailableColorModes}"
+                                                  SelectedItem="{Binding SelectedColorModeOption}"
+                                                  HorizontalAlignment="Stretch"
+                                                  CornerRadius="4"
+                                                  Background="White"
+                                                  Foreground="#111111"
+                                                  BorderBrush="#D1D5DB">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding DisplayName}" Foreground="#111111" VerticalAlignment="Center" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </Grid>
+
+                                    <CheckBox IsChecked="{Binding SettingsColorBlindSafe}" Margin="0,4,0,0">
+                                        <TextBlock Text="Use high-contrast, color-blind safe palettes (Okabe-Ito / Tol)" FontSize="12" Foreground="#374151" />
+                                    </CheckBox>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Section 2: Units & Sizing Metric -->
+                            <Border Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6" Padding="14">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="Units &amp; Size Calculation" FontWeight="Bold" FontSize="13" Foreground="#1F2937" />
+
+                                    <Grid ColumnDefinitions="150,*">
+                                        <TextBlock Grid.Column="0" Text="Size Unit System:" VerticalAlignment="Center" FontSize="12" Foreground="#4B5563" />
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding AvailableUnitSystems}"
+                                                  SelectedItem="{Binding SelectedUnitSystemOption}"
+                                                  HorizontalAlignment="Stretch"
+                                                  CornerRadius="4"
+                                                  Background="White"
+                                                  Foreground="#111111"
+                                                  BorderBrush="#D1D5DB">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding DisplayName}" Foreground="#111111" VerticalAlignment="Center" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </Grid>
+
+                                    <CheckBox IsChecked="{Binding SettingsUseAllocatedSize}" Margin="0,4,0,0">
+                                        <TextBlock Text="Use allocated size on disk instead of logical file size" FontSize="12" Foreground="#374151" />
+                                    </CheckBox>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Section 3: Treemap & Layout -->
+                            <Border Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6" Padding="14">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="Treemap Layout &amp; Tree View" FontWeight="Bold" FontSize="13" Foreground="#1F2937" />
+
+                                    <Grid ColumnDefinitions="150,*">
+                                        <TextBlock Grid.Column="0" Text="Layout Aspect Bias:" VerticalAlignment="Center" FontSize="12" Foreground="#4B5563" />
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding AvailableLayoutBiases}"
+                                                  SelectedItem="{Binding SelectedLayoutBiasOption}"
+                                                  HorizontalAlignment="Stretch"
+                                                  CornerRadius="4"
+                                                  Background="White"
+                                                  Foreground="#111111"
+                                                  BorderBrush="#D1D5DB">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding DisplayName}" Foreground="#111111" VerticalAlignment="Center" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="150,*,40">
+                                        <TextBlock Grid.Column="0" Text="Default Detail Level:" VerticalAlignment="Center" FontSize="12" Foreground="#4B5563" />
+                                        <Slider Grid.Column="1" Minimum="1" Maximum="5" Value="{Binding SettingsDetailLevel}" IsSnapToTickEnabled="True" TickFrequency="1" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Text="{Binding SettingsDetailLevel}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="SemiBold" FontSize="12" Foreground="#374151" />
+                                    </Grid>
+
+                                    <CheckBox IsChecked="{Binding SettingsShowFreeSpace}">
+                                        <TextBlock Text="Show drive free space block on map" FontSize="12" Foreground="#374151" />
+                                    </CheckBox>
+
+                                    <CheckBox IsChecked="{Binding SettingsTreePercentageRelativeToTotal}">
+                                        <TextBlock Text="Scale tree % bars relative to Total scanned (uncheck for % of Parent)" FontSize="12" Foreground="#374151" />
+                                    </CheckBox>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Section 4: File Actions & Safety -->
+                            <Border Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6" Padding="14">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="File Actions &amp; Safety" FontWeight="Bold" FontSize="13" Foreground="#1F2937" />
+
+                                    <CheckBox IsChecked="{Binding SettingsConfirmBeforeDelete}">
+                                        <TextBlock Text="Prompt for confirmation before moving items to Recycle Bin" FontSize="12" Foreground="#374151" />
+                                    </CheckBox>
+
+                                    <CheckBox IsChecked="{Binding SettingsAutoRescanAfterDelete}">
+                                        <TextBlock Text="Automatically rescan location after Recycle Bin deletion" FontSize="12" Foreground="#374151" />
+                                    </CheckBox>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Bottom Buttons -->
+                    <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,16,0,0">
+                        <Button Grid.Column="0"
+                                Content="Reset to Defaults"
+                                Command="{Binding ResetSettingsToDefaultsCommand}"
+                                Padding="12,6"
+                                Foreground="#4B5563" />
+
+                        <Button Grid.Column="2"
+                                Content="Cancel"
+                                Command="{Binding CloseSettingsCommand}"
+                                Padding="14,6"
+                                Margin="0,0,8,0" />
+
+                        <Button Grid.Column="3"
+                                Content="Save &amp; Apply"
+                                Command="{Binding SaveSettingsCommand}"
+                                Background="#0078D4"
+                                Foreground="White"
+                                FontWeight="SemiBold"
+                                Padding="16,6" />
+                    </Grid>
+                </Grid>
             </Border>
         </Border>
     </Grid>

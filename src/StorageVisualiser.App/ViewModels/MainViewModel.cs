@@ -14,18 +14,100 @@ using StorageVisualiser.Core.Export;
 using StorageVisualiser.Core.Formatting;
 using StorageVisualiser.Core.Model;
 using StorageVisualiser.Core.Scanning;
+using StorageVisualiser.Core.Settings;
 using StorageVisualiser.Core.Treemap;
 using StorageVisualiser.Windows.Scanning;
 using StorageVisualiser.Windows.Shell;
 
 namespace StorageVisualiser.App.ViewModels;
 
+public sealed record ColorModeOption(TreemapColorMode Value, string DisplayName);
+public sealed record UnitSystemOption(UnitSystem Value, string DisplayName);
+public sealed record LayoutBiasOption(TreemapBias Value, string DisplayName);
+
 public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
+    private readonly SettingsService _settingsService = new();
     private readonly WindowsAutoScanner _scanner = new();
     private readonly TreemapLayoutEngine _layoutEngine = new();
     private readonly FileActionService _fileActionService;
     private string _lastScanDuration = string.Empty;
+
+    public IReadOnlyList<ColorModeOption> AvailableColorModes { get; } =
+    [
+        new(TreemapColorMode.DepthRainbow, "Rainbow Depth (SpaceMonger Classic)"),
+        new(TreemapColorMode.FileTypeCategory, "File Type Category (Media, Code, Docs...)"),
+        new(TreemapColorMode.FileAge, "File Age (Recency Tiers)")
+    ];
+
+    public IReadOnlyList<UnitSystemOption> AvailableUnitSystems { get; } =
+    [
+        new(UnitSystem.Windows, "Windows Binary (1024 base: KB, MB, GB)"),
+        new(UnitSystem.Iec, "IEC Standard (1024 base: KiB, MiB, GiB)"),
+        new(UnitSystem.Si, "Metric / SI (1000 base: kB, MB, GB)")
+    ];
+
+    public IReadOnlyList<LayoutBiasOption> AvailableLayoutBiases { get; } =
+    [
+        new(TreemapBias.Equal, "Balanced (Squarified)"),
+        new(TreemapBias.Horizontal, "Favor Horizontal (Wider Boxes)"),
+        new(TreemapBias.Vertical, "Favor Vertical (Taller Boxes)")
+    ];
+
+    [ObservableProperty]
+    private TreemapColorMode _colorMode = TreemapColorMode.DepthRainbow;
+
+    [ObservableProperty]
+    private bool _colorBlindSafe;
+
+    [ObservableProperty]
+    private UnitSystem _unitSystem = UnitSystem.Windows;
+
+    [ObservableProperty]
+    private bool _useAllocatedSize;
+
+    [ObservableProperty]
+    private TreemapBias _layoutBias = TreemapBias.Equal;
+
+    [ObservableProperty]
+    private bool _confirmBeforeDelete = true;
+
+    [ObservableProperty]
+    private bool _autoRescanAfterDelete = true;
+
+    // Settings Dialog Working State
+    [ObservableProperty]
+    private bool _isSettingsVisible;
+
+    [ObservableProperty]
+    private ColorModeOption? _selectedColorModeOption;
+
+    [ObservableProperty]
+    private bool _settingsColorBlindSafe;
+
+    [ObservableProperty]
+    private UnitSystemOption? _selectedUnitSystemOption;
+
+    [ObservableProperty]
+    private bool _settingsUseAllocatedSize;
+
+    [ObservableProperty]
+    private LayoutBiasOption? _selectedLayoutBiasOption;
+
+    [ObservableProperty]
+    private int _settingsDetailLevel = 3;
+
+    [ObservableProperty]
+    private bool _settingsShowFreeSpace = true;
+
+    [ObservableProperty]
+    private bool _settingsTreePercentageRelativeToTotal = true;
+
+    [ObservableProperty]
+    private bool _settingsConfirmBeforeDelete = true;
+
+    [ObservableProperty]
+    private bool _settingsAutoRescanAfterDelete = true;
 
     [ObservableProperty]
     private bool _canExport;
@@ -107,6 +189,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(TreePercentageRelativeToParent));
             StorageNode.TreePercentageRelativeToTotal = true;
             RootNode?.NotifyPercentageChanged();
+            _settingsService.Save(_settingsService.Current with { TreePercentageRelativeToTotal = true });
         }
     }
 
@@ -118,6 +201,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(TreePercentageRelativeToTotal));
             StorageNode.TreePercentageRelativeToTotal = false;
             RootNode?.NotifyPercentageChanged();
+            _settingsService.Save(_settingsService.Current with { TreePercentageRelativeToTotal = false });
         }
     }
 
@@ -237,6 +321,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             var root = TreeRoots[0];
             TreeRoots = [root];
         }
+        _settingsService.Save(_settingsService.Current with { ShowFreeSpace = value });
     }
 
     partial void OnSelectedTabIndexChanged(int value)
@@ -259,12 +344,45 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _ => Options
         };
         RecomputeLayout(lastWidth, lastHeight);
+        _settingsService.Save(_settingsService.Current with { DefaultDetailLevel = value });
     }
 
     public MainViewModel()
     {
         var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "file_actions.log");
         _fileActionService = new FileActionService(new WindowsRecycleBinProvider(), logFilePath: logPath);
+
+        var s = _settingsService.Current;
+        _colorMode = s.ColorMode;
+        _colorBlindSafe = s.ColorBlindSafe;
+        _unitSystem = s.UnitSystem;
+        SizeFormatter.DefaultUnitSystem = s.UnitSystem;
+        _useAllocatedSize = s.UseAllocatedSize;
+        _layoutBias = s.LayoutBias;
+        _showFreeSpace = s.ShowFreeSpace;
+        _detailLevel = Math.Clamp(s.DefaultDetailLevel, 1, 5);
+        _treePercentageRelativeToTotal = s.TreePercentageRelativeToTotal;
+        _treePercentageRelativeToParent = !s.TreePercentageRelativeToTotal;
+        StorageNode.TreePercentageRelativeToTotal = s.TreePercentageRelativeToTotal;
+        StorageNode.ShowFreeSpaceInTree = s.ShowFreeSpace;
+        _confirmBeforeDelete = s.ConfirmBeforeDelete;
+        _autoRescanAfterDelete = s.AutoRescanAfterDelete;
+
+        Options = (_detailLevel switch
+        {
+            1 => Options with { MinItemFraction = 0.015, MinPixelDimension = 22.0, MinFolderContentDimension = 48.0 },
+            2 => Options with { MinItemFraction = 0.008, MinPixelDimension = 18.0, MinFolderContentDimension = 40.0 },
+            3 => Options with { MinItemFraction = 0.005, MinPixelDimension = 14.0, MinFolderContentDimension = 34.0 },
+            4 => Options with { MinItemFraction = 0.003, MinPixelDimension = 10.0, MinFolderContentDimension = 26.0 },
+            5 => Options with { MinItemFraction = 0.0015, MinPixelDimension = 6.0, MinFolderContentDimension = 18.0 },
+            _ => Options
+        }) with
+        {
+            UseAllocatedSize = s.UseAllocatedSize,
+            Bias = s.LayoutBias,
+            ShowFreeSpace = s.ShowFreeSpace
+        };
+
         RefreshDrives();
     }
 
@@ -671,7 +789,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    public void RequestDelete()
+    public async Task RequestDelete()
     {
         if (SelectedNode == null) return;
 
@@ -685,14 +803,20 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             IsDeleteBlocked = true;
             DeleteBlockedReason = reason;
             PendingDeleteTitle = "Protected Item - Deletion Blocked";
+            IsDeleteConfirmationVisible = true;
+            return;
         }
-        else
+
+        IsDeleteBlocked = false;
+        DeleteBlockedReason = string.Empty;
+        PendingDeleteTitle = SelectedNode.Kind == StorageItemKind.Directory
+            ? "Move Directory to Recycle Bin?"
+            : "Move File to Recycle Bin?";
+
+        if (!ConfirmBeforeDelete)
         {
-            IsDeleteBlocked = false;
-            DeleteBlockedReason = string.Empty;
-            PendingDeleteTitle = SelectedNode.Kind == StorageItemKind.Directory
-                ? "Move Directory to Recycle Bin?"
-                : "Move File to Recycle Bin?";
+            await ConfirmDelete();
+            return;
         }
 
         IsDeleteConfirmationVisible = true;
@@ -706,7 +830,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    public void ConfirmDelete()
+    public async Task ConfirmDelete()
     {
         if (PendingDeleteNode == null || IsDeleteBlocked)
         {
@@ -769,6 +893,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                     TopFiles.Remove(topMatch);
                 }
             }
+
+            if (AutoRescanAfterDelete && !IsScanning && !string.IsNullOrEmpty(CurrentPath))
+            {
+                await Rescan();
+            }
         }
         else
         {
@@ -776,6 +905,102 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
 
         PendingDeleteNode = null;
+    }
+
+    [RelayCommand]
+    public void OpenSettings()
+    {
+        SelectedColorModeOption = System.Linq.Enumerable.FirstOrDefault(AvailableColorModes, o => o.Value == ColorMode) ?? AvailableColorModes[0];
+        SettingsColorBlindSafe = ColorBlindSafe;
+        SelectedUnitSystemOption = System.Linq.Enumerable.FirstOrDefault(AvailableUnitSystems, o => o.Value == UnitSystem) ?? AvailableUnitSystems[0];
+        SettingsUseAllocatedSize = UseAllocatedSize;
+        SelectedLayoutBiasOption = System.Linq.Enumerable.FirstOrDefault(AvailableLayoutBiases, o => o.Value == LayoutBias) ?? AvailableLayoutBiases[0];
+        SettingsDetailLevel = DetailLevel;
+        SettingsShowFreeSpace = ShowFreeSpace;
+        SettingsTreePercentageRelativeToTotal = TreePercentageRelativeToTotal;
+        SettingsConfirmBeforeDelete = ConfirmBeforeDelete;
+        SettingsAutoRescanAfterDelete = AutoRescanAfterDelete;
+
+        IsSettingsVisible = true;
+    }
+
+    [RelayCommand]
+    public void CloseSettings()
+    {
+        IsSettingsVisible = false;
+    }
+
+    [RelayCommand]
+    public void ResetSettingsToDefaults()
+    {
+        var def = new AppSettings();
+        SelectedColorModeOption = System.Linq.Enumerable.FirstOrDefault(AvailableColorModes, o => o.Value == def.ColorMode) ?? AvailableColorModes[0];
+        SettingsColorBlindSafe = def.ColorBlindSafe;
+        SelectedUnitSystemOption = System.Linq.Enumerable.FirstOrDefault(AvailableUnitSystems, o => o.Value == def.UnitSystem) ?? AvailableUnitSystems[0];
+        SettingsUseAllocatedSize = def.UseAllocatedSize;
+        SelectedLayoutBiasOption = System.Linq.Enumerable.FirstOrDefault(AvailableLayoutBiases, o => o.Value == def.LayoutBias) ?? AvailableLayoutBiases[0];
+        SettingsDetailLevel = def.DefaultDetailLevel;
+        SettingsShowFreeSpace = def.ShowFreeSpace;
+        SettingsTreePercentageRelativeToTotal = def.TreePercentageRelativeToTotal;
+        SettingsConfirmBeforeDelete = def.ConfirmBeforeDelete;
+        SettingsAutoRescanAfterDelete = def.AutoRescanAfterDelete;
+    }
+
+    [RelayCommand]
+    public void SaveSettings()
+    {
+        var updated = new AppSettings
+        {
+            ColorMode = SelectedColorModeOption?.Value ?? TreemapColorMode.DepthRainbow,
+            ColorBlindSafe = SettingsColorBlindSafe,
+            UnitSystem = SelectedUnitSystemOption?.Value ?? UnitSystem.Windows,
+            UseAllocatedSize = SettingsUseAllocatedSize,
+            DefaultDetailLevel = SettingsDetailLevel,
+            LayoutBias = SelectedLayoutBiasOption?.Value ?? TreemapBias.Equal,
+            ShowFreeSpace = SettingsShowFreeSpace,
+            TreePercentageRelativeToTotal = SettingsTreePercentageRelativeToTotal,
+            ConfirmBeforeDelete = SettingsConfirmBeforeDelete,
+            AutoRescanAfterDelete = SettingsAutoRescanAfterDelete
+        };
+
+        _settingsService.Save(updated);
+
+        // Apply active properties
+        ColorMode = updated.ColorMode;
+        ColorBlindSafe = updated.ColorBlindSafe;
+        UnitSystem = updated.UnitSystem;
+        SizeFormatter.DefaultUnitSystem = updated.UnitSystem;
+        UseAllocatedSize = updated.UseAllocatedSize;
+        LayoutBias = updated.LayoutBias;
+        ShowFreeSpace = updated.ShowFreeSpace;
+        DetailLevel = updated.DefaultDetailLevel;
+        ConfirmBeforeDelete = updated.ConfirmBeforeDelete;
+        AutoRescanAfterDelete = updated.AutoRescanAfterDelete;
+
+        TreePercentageRelativeToTotal = updated.TreePercentageRelativeToTotal;
+        TreePercentageRelativeToParent = !updated.TreePercentageRelativeToTotal;
+        StorageNode.TreePercentageRelativeToTotal = updated.TreePercentageRelativeToTotal;
+        StorageNode.ShowFreeSpaceInTree = updated.ShowFreeSpace;
+
+        Options = Options with
+        {
+            UseAllocatedSize = updated.UseAllocatedSize,
+            Bias = updated.LayoutBias,
+            ShowFreeSpace = updated.ShowFreeSpace
+        };
+
+        // Recompute treemap layout and refresh node formatting
+        RecomputeLayout(lastWidth, lastHeight);
+        RootNode?.NotifyFormattingChanged();
+        RootNode?.NotifyPercentageChanged();
+
+        if (SelectedNode != null)
+        {
+            SelectNode(SelectedNode);
+        }
+
+        RefreshDrives();
+        IsSettingsVisible = false;
     }
 
     [RelayCommand]

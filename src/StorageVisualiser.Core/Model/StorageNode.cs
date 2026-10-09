@@ -245,6 +245,20 @@ public sealed class StorageNode : INotifyPropertyChanged
             }
         }
     }
+
+    public void NotifyFormattingChanged()
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FormattedSize)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FormattedDisplaySize)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TreePercentageTooltip)));
+        if (_children != null)
+        {
+            foreach (var child in _children)
+            {
+                child.NotifyFormattingChanged();
+            }
+        }
+    }
     public string FormattedLastModified => LastModified?.LocalDateTime.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture) ?? "-";
     public string ProgressColor => Kind == StorageItemKind.DriveFreeSpace ? "#CBD5E1" : "#93C5FD";
     public string IconText => Kind switch

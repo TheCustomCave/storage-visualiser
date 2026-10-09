@@ -15,8 +15,11 @@ public static class SizeFormatter
     private static readonly string[] IecUnits = ["bytes", "KiB", "MiB", "GiB", "TiB", "PiB"];
     private static readonly string[] SiUnits = ["bytes", "kB", "MB", "GB", "TB", "PB"];
 
-    public static string Format(long bytes, UnitSystem system = UnitSystem.Windows, bool exact = false)
+    public static UnitSystem DefaultUnitSystem { get; set; } = UnitSystem.Windows;
+
+    public static string Format(long bytes, UnitSystem? system = null, bool exact = false)
     {
+        var activeSystem = system ?? DefaultUnitSystem;
         if (exact)
         {
             return $"{bytes:N0} bytes";
@@ -24,21 +27,21 @@ public static class SizeFormatter
 
         if (bytes < 0)
         {
-            return "-" + Format(-bytes, system, false);
+            return "-" + Format(-bytes, activeSystem, false);
         }
 
-        if (bytes < 1024 && system != UnitSystem.Si)
+        if (bytes < 1024 && activeSystem != UnitSystem.Si)
         {
             return $"{bytes} bytes";
         }
 
-        if (bytes < 1000 && system == UnitSystem.Si)
+        if (bytes < 1000 && activeSystem == UnitSystem.Si)
         {
             return $"{bytes} bytes";
         }
 
-        double divisor = system == UnitSystem.Si ? 1000.0 : 1024.0;
-        var units = system switch
+        double divisor = activeSystem == UnitSystem.Si ? 1000.0 : 1024.0;
+        var units = activeSystem switch
         {
             UnitSystem.Iec => IecUnits,
             UnitSystem.Si => SiUnits,

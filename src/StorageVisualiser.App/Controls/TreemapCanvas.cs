@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using StorageVisualiser.Core.Analysis;
 using StorageVisualiser.Core.Formatting;
 using StorageVisualiser.Core.Model;
+using StorageVisualiser.Core.Settings;
 using StorageVisualiser.Core.Treemap;
 
 namespace StorageVisualiser.App.Controls;
@@ -19,6 +22,12 @@ public sealed class TreemapCanvas : Control
     public static readonly StyledProperty<StorageNode?> SelectedNodeProperty =
         AvaloniaProperty.Register<TreemapCanvas, StorageNode?>(nameof(SelectedNode));
 
+    public static readonly StyledProperty<TreemapColorMode> ColorModeProperty =
+        AvaloniaProperty.Register<TreemapCanvas, TreemapColorMode>(nameof(ColorMode), TreemapColorMode.DepthRainbow);
+
+    public static readonly StyledProperty<bool> ColorBlindSafeProperty =
+        AvaloniaProperty.Register<TreemapCanvas, bool>(nameof(ColorBlindSafe), false);
+
     public TreemapItem? LayoutRoot
     {
         get => GetValue(LayoutRootProperty);
@@ -29,6 +38,18 @@ public sealed class TreemapCanvas : Control
     {
         get => GetValue(SelectedNodeProperty);
         set => SetValue(SelectedNodeProperty, value);
+    }
+
+    public TreemapColorMode ColorMode
+    {
+        get => GetValue(ColorModeProperty);
+        set => SetValue(ColorModeProperty, value);
+    }
+
+    public bool ColorBlindSafe
+    {
+        get => GetValue(ColorBlindSafeProperty);
+        set => SetValue(ColorBlindSafeProperty, value);
     }
 
     public event Action<StorageNode?>? NodeSelected;
@@ -45,6 +66,10 @@ public sealed class TreemapCanvas : Control
     private static readonly IBrush TextBrush = new SolidColorBrush(Color.Parse("#111111"));
     private static readonly Typeface DefaultTypeface = new("Segoe UI", FontStyle.Normal, FontWeight.Normal);
     private static readonly Typeface BoldTypeface = new("Segoe UI", FontStyle.Normal, FontWeight.SemiBold);
+
+    // Neutral folder brushes for FileTypeCategory and FileAge modes
+    private static readonly IBrush NeutralFolderContentBrush = new SolidColorBrush(Color.Parse("#F8FAFC"));
+    private static readonly IBrush NeutralFolderHeaderBrush = new SolidColorBrush(Color.Parse("#E2E8F0"));
 
     // SpaceMonger rainbow depth levels
     private static readonly (IBrush Content, IBrush Header)[] DepthPalette =
@@ -65,12 +90,69 @@ public sealed class TreemapCanvas : Control
         (new SolidColorBrush(Color.Parse("#E0F2F1")), new SolidColorBrush(Color.Parse("#4DB6AC")))
     ];
 
+    // Color-blind safe depth palette (Okabe-Ito / Tol high-contrast hues)
+    private static readonly (IBrush Content, IBrush Header)[] ColorBlindDepthPalette =
+    [
+        (new SolidColorBrush(Color.Parse("#FDEEE9")), new SolidColorBrush(Color.Parse("#D55E00"))), // Vermilion
+        (new SolidColorBrush(Color.Parse("#FEF6E9")), new SolidColorBrush(Color.Parse("#E69F00"))), // Orange
+        (new SolidColorBrush(Color.Parse("#FFFEE6")), new SolidColorBrush(Color.Parse("#F0E442"))), // Yellow
+        (new SolidColorBrush(Color.Parse("#E6F5F0")), new SolidColorBrush(Color.Parse("#009E73"))), // Bluish Green
+        (new SolidColorBrush(Color.Parse("#EDF7FD")), new SolidColorBrush(Color.Parse("#56B4E9"))), // Sky Blue
+        (new SolidColorBrush(Color.Parse("#E6F1F8")), new SolidColorBrush(Color.Parse("#0072B2"))), // Blue
+        (new SolidColorBrush(Color.Parse("#F9EEF4")), new SolidColorBrush(Color.Parse("#CC79A7")))  // Reddish Purple
+    ];
+
     // SpaceMonger warm peach/salmon tile color for files
     private static readonly IBrush FileFillBrush = new SolidColorBrush(Color.Parse("#FFCCBC"));
+    private static readonly IBrush FileFillSafeBrush = new SolidColorBrush(Color.Parse("#FED7AA"));
+
+    // File type category brushes (standard pastel palette)
+    private static readonly Dictionary<string, IBrush> CategoryBrushes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Video"] = new SolidColorBrush(Color.Parse("#DDD6FE")),              // Soft Purple
+        ["Images"] = new SolidColorBrush(Color.Parse("#A7F3D0")),             // Soft Emerald
+        ["Audio"] = new SolidColorBrush(Color.Parse("#A5F3FC")),              // Soft Cyan
+        ["Archives"] = new SolidColorBrush(Color.Parse("#FDE68A")),           // Soft Amber
+        ["Documents"] = new SolidColorBrush(Color.Parse("#BFDBFE")),          // Soft Blue
+        ["System / Binaries"] = new SolidColorBrush(Color.Parse("#FECACA")),  // Soft Rose
+        ["Disk Images / VMs"] = new SolidColorBrush(Color.Parse("#C7D2FE")),  // Soft Indigo
+        ["Code / Data"] = new SolidColorBrush(Color.Parse("#99F6E4")),        // Soft Teal
+        ["No Extension"] = new SolidColorBrush(Color.Parse("#E2E8F0")),       // Light Slate
+        ["Other"] = new SolidColorBrush(Color.Parse("#CBD5E1"))               // Slate
+    };
+
+    // Color-blind safe category brushes (Okabe-Ito high-contrast tints)
+    private static readonly Dictionary<string, IBrush> ColorBlindCategoryBrushes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Video"] = new SolidColorBrush(Color.Parse("#F3E8FF")),              // Purple tint
+        ["Images"] = new SolidColorBrush(Color.Parse("#CCFBF1")),             // Teal tint
+        ["Audio"] = new SolidColorBrush(Color.Parse("#BAE6FD")),              // Sky Blue tint
+        ["Archives"] = new SolidColorBrush(Color.Parse("#FEF3C7")),           // Amber tint
+        ["Documents"] = new SolidColorBrush(Color.Parse("#DBEAFE")),          // Blue tint
+        ["System / Binaries"] = new SolidColorBrush(Color.Parse("#FFE4E6")),  // Vermilion/Rose tint
+        ["Disk Images / VMs"] = new SolidColorBrush(Color.Parse("#E0E7FF")),  // Indigo tint
+        ["Code / Data"] = new SolidColorBrush(Color.Parse("#FEF9C3")),        // Yellow tint
+        ["No Extension"] = new SolidColorBrush(Color.Parse("#F1F5F9")),       // Neutral slate
+        ["Other"] = new SolidColorBrush(Color.Parse("#E2E8F0"))               // Neutral slate
+    };
+
+    // File age brushes (standard recency tiers)
+    private static readonly IBrush AgeRecentBrush = new SolidColorBrush(Color.Parse("#BAE6FD"));      // < 1 month: Fresh blue
+    private static readonly IBrush AgeMediumRecentBrush = new SolidColorBrush(Color.Parse("#BBF7D0"));// 1-6 months: Green
+    private static readonly IBrush AgeAgingBrush = new SolidColorBrush(Color.Parse("#FEF08A"));       // 6-12 months: Yellow
+    private static readonly IBrush AgeOldBrush = new SolidColorBrush(Color.Parse("#FED7AA"));         // 1-2 years: Orange
+    private static readonly IBrush AgeArchivedBrush = new SolidColorBrush(Color.Parse("#CBD5E1"));    // > 2 years: Muted slate
+
+    // Color-blind safe file age brushes (monotonic luminance/blue-yellow gradient)
+    private static readonly IBrush AgeSafeRecentBrush = new SolidColorBrush(Color.Parse("#E0F2FE"));      // Lightest blue
+    private static readonly IBrush AgeSafeMediumRecentBrush = new SolidColorBrush(Color.Parse("#BAE6FD"));// Medium blue
+    private static readonly IBrush AgeSafeAgingBrush = new SolidColorBrush(Color.Parse("#FEF3C7"));       // Light yellow
+    private static readonly IBrush AgeSafeOldBrush = new SolidColorBrush(Color.Parse("#FDE68A"));         // Deeper yellow/amber
+    private static readonly IBrush AgeSafeArchivedBrush = new SolidColorBrush(Color.Parse("#CBD5E1"));    // Slate
 
     static TreemapCanvas()
     {
-        AffectsRender<TreemapCanvas>(LayoutRootProperty, SelectedNodeProperty);
+        AffectsRender<TreemapCanvas>(LayoutRootProperty, SelectedNodeProperty, ColorModeProperty, ColorBlindSafeProperty);
     }
 
     public TreemapCanvas()
@@ -128,8 +210,7 @@ public sealed class TreemapCanvas : Control
 
         if (node.Kind == StorageItemKind.Directory || item.HasChildren)
         {
-            var palette = DepthPalette[item.Depth % DepthPalette.Length];
-            var bgBrush = node.Kind == StorageItemKind.OtherGroup ? OtherGroupBrush : palette.Content;
+            var (bgBrush, headerBrush) = GetFolderBrushes(item, node.Kind == StorageItemKind.OtherGroup);
 
             // Outer folder background
             context.FillRectangle(bgBrush, rect);
@@ -140,7 +221,7 @@ public sealed class TreemapCanvas : Control
             {
                 var h = item.HeaderBounds;
                 var headerRect = new Rect(h.X, h.Y, h.Width, h.Height);
-                context.FillRectangle(palette.Header, headerRect);
+                context.FillRectangle(headerBrush, headerRect);
                 context.DrawRectangle(BorderPen, headerRect);
 
                 if (h.Width >= 20 && h.Height >= 10)
@@ -218,7 +299,8 @@ public sealed class TreemapCanvas : Control
         else
         {
             // Standard File
-            context.FillRectangle(FileFillBrush, rect);
+            var fileBrush = GetFileBrush(node);
+            context.FillRectangle(fileBrush, rect);
             context.DrawRectangle(BorderPen, rect);
 
             if (b.Width >= 24 && b.Height >= 14)
@@ -234,6 +316,72 @@ public sealed class TreemapCanvas : Control
             context.DrawRectangle(SelectionPen, rect);
             context.FillRectangle(SelectionOverlayBrush, rect);
         }
+    }
+
+    private (IBrush Content, IBrush Header) GetFolderBrushes(TreemapItem item, bool isOtherGroup)
+    {
+        if (isOtherGroup)
+        {
+            return (OtherGroupBrush, OtherGroupBrush);
+        }
+
+        if (ColorMode == TreemapColorMode.DepthRainbow)
+        {
+            var palette = ColorBlindSafe ? ColorBlindDepthPalette : DepthPalette;
+            return palette[item.Depth % palette.Length];
+        }
+
+        // For FileTypeCategory and FileAge modes, folder shells are calm neutral so the file color tiles pop out
+        return (NeutralFolderContentBrush, NeutralFolderHeaderBrush);
+    }
+
+    private IBrush GetFileBrush(StorageNode node)
+    {
+        return ColorMode switch
+        {
+            TreemapColorMode.FileTypeCategory => GetFileTypeBrush(node),
+            TreemapColorMode.FileAge => GetFileAgeBrush(node),
+            _ => ColorBlindSafe ? FileFillSafeBrush : FileFillBrush
+        };
+    }
+
+    private IBrush GetFileTypeBrush(StorageNode node)
+    {
+        var ext = Path.GetExtension(node.Name);
+        var category = StorageAnalysisEngine.CategorizeExtension(ext);
+        var brushMap = ColorBlindSafe ? ColorBlindCategoryBrushes : CategoryBrushes;
+        if (brushMap.TryGetValue(category, out var brush))
+        {
+            return brush;
+        }
+        return brushMap["Other"];
+    }
+
+    private IBrush GetFileAgeBrush(StorageNode node)
+    {
+        if (!node.LastModified.HasValue)
+        {
+            return ColorBlindSafe ? AgeSafeArchivedBrush : AgeArchivedBrush;
+        }
+
+        var age = DateTimeOffset.Now - node.LastModified.Value;
+        if (age < TimeSpan.FromDays(30))
+        {
+            return ColorBlindSafe ? AgeSafeRecentBrush : AgeRecentBrush;
+        }
+        if (age < TimeSpan.FromDays(180))
+        {
+            return ColorBlindSafe ? AgeSafeMediumRecentBrush : AgeMediumRecentBrush;
+        }
+        if (age < TimeSpan.FromDays(365))
+        {
+            return ColorBlindSafe ? AgeSafeAgingBrush : AgeAgingBrush;
+        }
+        if (age < TimeSpan.FromDays(730))
+        {
+            return ColorBlindSafe ? AgeSafeOldBrush : AgeOldBrush;
+        }
+        return ColorBlindSafe ? AgeSafeArchivedBrush : AgeArchivedBrush;
     }
 
     private static void DrawFreeSpaceText(

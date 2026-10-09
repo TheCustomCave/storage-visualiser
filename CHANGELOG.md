@@ -5,6 +5,29 @@ All notable changes to Storage Visualiser are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Persistent Settings & Configuration System**:
+  - Implemented portable `settings.json` storage next to the executable, with seamless `%LOCALAPPDATA%\StorageVisualiser\settings.json` fallback when run from read-only paths.
+  - Built strictly for Native AOT compatibility using `System.Text.Json` source generator (`SettingsJsonContext`).
+  - Added fail-safe fallback to defaults if `settings.json` is missing or corrupted.
+- **Treemap Color Themes & Accessible Palettes**:
+  - **Rainbow Depth (SpaceMonger Classic)**: SpaceMonger 7-level folder depth rainbow with peach file fills.
+  - **File Type Category**: Pastel category coloring across media, archives, code, documents, binaries, and system files.
+  - **File Age**: Multi-tier recency coloring (<1mo, 1-6mo, 6-12mo, 1-2yr, >2yr cold/archived).
+  - **Color-Blind Safe Mode**: Full high-contrast Okabe-Ito / Tol palette mapping across all three color modes.
+- **Size Unit Systems & Metrics**:
+  - Support for **Windows Binary** (1024 base: KB, MB, GB), **IEC Standard** (1024 base: KiB, MiB, GiB), and **Metric / SI** (1000 base: kB, MB, GB).
+  - Configurable default unit system in `SizeFormatter` dynamically updating Treemap labels, Tree view, Top Files, and drive info.
+  - Support for Allocated Size on disk vs Logical File Size in Treemap sizing.
+- **Treemap Layout Bias**:
+  - Aspect ratio bias options: Balanced (Squarified), Favor Horizontal (Wider Boxes), and Favor Vertical (Taller Boxes).
+- **Settings Dialog UI**:
+  - Added **⚙️ Settings** button to the main toolbar.
+  - Accessible modal dialog organized into Appearance & Colors, Units & Size Calculation, Treemap Layout & Tree View, and File Actions & Safety.
+  - "Reset to Defaults", "Cancel", and "Save & Apply" controls with live re-rendering.
+
 ## [0.1.1-alpha] - 2026-10-05
 
 ### Added

@@ -59,6 +59,7 @@ A modern, **portable**, **secure**, open-source disk-space visualiser for Window
 | D23 | Duplicate finder | Stretch goal / side quest. |
 | D24 | Code signing | Separate plan in [code-signing.md](code-signing.md). |
 | D25 | Other group drill-down & tree % scaling | Grouped '<Other>' blocks support drilling down into their own batch of items. Tree percentage bars scale monotonically as % of Total by default with a % of Parent toggle; drive root shows true capacity utilization. |
+| D26 | Settings persistence & color modes | Portable settings.json next to executable with fallback to %LOCALAPPDATA%\StorageVisualiser\settings.json. Native AOT source-generated JSON. Switchable color themes: SpaceMonger Depth Rainbow, File Type Category, File Age recency tiers, plus Okabe-Ito color-blind safe palettes. |
 
 ---
 
