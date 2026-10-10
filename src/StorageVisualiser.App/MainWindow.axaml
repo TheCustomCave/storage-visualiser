@@ -78,17 +78,27 @@
                             ToolTip.Tip="Rescan the current drive or folder" />
                 </StackPanel>
 
-                <!-- Export Report Button -->
+                <!-- Export Report Dropdown Button -->
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-                    <Button Content="Export Report..."
-                            Click="OnExportReportClicked"
+                    <Button Content="Export ▾"
                             IsEnabled="{Binding CanExport}"
                             Height="32"
                             VerticalContentAlignment="Center"
                             CornerRadius="4"
                             Padding="12,0"
                             FontWeight="Medium"
-                            ToolTip.Tip="Export an interactive, self-contained HTML storage report" />
+                            ToolTip.Tip="Export scan data (HTML Report, CSV, or JSON)">
+                        <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuItem Header="Interactive HTML Report..." Click="OnExportReportClicked" />
+                                <Separator />
+                                <MenuItem Header="Top Files to CSV..." Click="OnExportCsvTopFilesClicked" />
+                                <MenuItem Header="File Types to CSV..." Click="OnExportCsvFileTypesClicked" />
+                                <Separator />
+                                <MenuItem Header="Full Scan Data to JSON..." Click="OnExportJsonClicked" />
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
                 </StackPanel>
 
                 <!-- SpaceMonger Free Space Toggle -->
@@ -635,13 +645,22 @@
                     BoxShadow="0 15 35 #50000000">
                 <Grid RowDefinitions="Auto,*,Auto">
                     <!-- Title Bar -->
-                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
                         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                             <TextBlock Text="⚙️" FontSize="20" VerticalAlignment="Center" />
                             <TextBlock Text="Settings &amp; Preferences" FontWeight="Bold" FontSize="16" Foreground="#111827" VerticalAlignment="Center" />
                         </StackPanel>
                         <Button Grid.Column="1" Content="✕" Command="{Binding CloseSettingsCommand}" Background="Transparent" Foreground="#6B7280" BorderThickness="0" Padding="8,4" FontSize="14" />
                     </Grid>
+
+                    <!-- Policy Active Notice Banner -->
+                    <Border Grid.Row="0" Margin="0,38,0,12" Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="6" Padding="10,6"
+                            IsVisible="{Binding IsPolicyActive}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="🛡️" FontSize="14" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding PolicyStatusMessage}" FontSize="12" Foreground="#1E40AF" FontWeight="Medium" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
 
                     <!-- Scrollable Content -->
                     <ScrollViewer Grid.Row="1" MaxHeight="500" VerticalScrollBarVisibility="Auto">
@@ -749,13 +768,33 @@
                                 <StackPanel Spacing="10">
                                     <TextBlock Text="File Actions &amp; Safety" FontWeight="Bold" FontSize="13" Foreground="#1F2937" />
 
-                                    <CheckBox IsChecked="{Binding SettingsConfirmBeforeDelete}">
-                                        <TextBlock Text="Prompt for confirmation before moving items to Recycle Bin" FontSize="12" Foreground="#374151" />
-                                    </CheckBox>
+                                    <StackPanel Spacing="4">
+                                        <CheckBox IsChecked="{Binding SettingsConfirmBeforeDelete}"
+                                                  IsEnabled="{Binding !IsDeleteDisabledByPolicy}">
+                                            <TextBlock Text="Prompt for confirmation before moving items to Recycle Bin" FontSize="12" Foreground="#374151" />
+                                        </CheckBox>
+                                        <TextBlock Text="🔒 Deletion is disabled by organisation policy"
+                                                   FontSize="11" Foreground="#DC2626" FontStyle="Italic" Margin="28,-2,0,0"
+                                                   IsVisible="{Binding IsDeleteDisabledByPolicy}" />
+                                    </StackPanel>
 
-                                    <CheckBox IsChecked="{Binding SettingsAutoRescanAfterDelete}">
+                                    <CheckBox IsChecked="{Binding SettingsAutoRescanAfterDelete}"
+                                              IsEnabled="{Binding !IsDeleteDisabledByPolicy}">
                                         <TextBlock Text="Automatically rescan location after Recycle Bin deletion" FontSize="12" Foreground="#374151" />
                                     </CheckBox>
+
+                                    <!-- Section 5: Exports & Privacy -->
+                                    <TextBlock Text="Reports &amp; Privacy" FontWeight="Bold" FontSize="13" Foreground="#1F2937" Margin="0,8,0,0" />
+
+                                    <StackPanel Spacing="4">
+                                        <CheckBox IsChecked="{Binding SettingsRedactPathsInExports}"
+                                                  IsEnabled="{Binding !IsExportRedactionLockedByPolicy}">
+                                            <TextBlock Text="Redact user profile folder names in exports (C:\Users\&lt;user&gt;\...)" FontSize="12" Foreground="#374151" />
+                                        </CheckBox>
+                                        <TextBlock Text="🔒 Enforced by organisation policy"
+                                                   FontSize="11" Foreground="#4B5563" FontStyle="Italic" Margin="28,-2,0,0"
+                                                   IsVisible="{Binding IsExportRedactionLockedByPolicy}" />
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
                         </StackPanel>

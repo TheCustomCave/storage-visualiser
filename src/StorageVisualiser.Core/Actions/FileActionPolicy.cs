@@ -15,6 +15,7 @@ public sealed class FileActionPolicy
     public DeleteMode Mode { get; set; } = DeleteMode.RecycleBinOnly;
 
     public List<string> AdditionalProtectedPaths { get; set; } = [];
+    public bool ReplaceBuiltInProtectedPaths { get; set; }
 
     public bool AllowPermanentDelete => Mode == DeleteMode.AllowPermanent;
 

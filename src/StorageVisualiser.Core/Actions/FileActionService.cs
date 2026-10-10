@@ -110,21 +110,24 @@ public sealed class FileActionService
             return false;
         }
 
-        // Check built-in protected paths
-        foreach (var protectedPath in _builtInProtectedPaths)
+        // Check built-in protected paths (unless policy replaced them)
+        if (!Policy.ReplaceBuiltInProtectedPaths)
         {
-            if (string.Equals(normalized, protectedPath, StringComparison.OrdinalIgnoreCase))
+            foreach (var protectedPath in _builtInProtectedPaths)
             {
-                reason = $"'{node.Name}' is a protected system directory.";
-                return false;
-            }
+                if (string.Equals(normalized, protectedPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    reason = $"'{node.Name}' is a protected system directory.";
+                    return false;
+                }
 
-            // Also protect direct Windows directory contents from accidental deletion
-            var winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-            if (!string.IsNullOrEmpty(winDir) && normalized.StartsWith(NormalizePath(winDir) + "\\", StringComparison.OrdinalIgnoreCase))
-            {
-                reason = $"Items inside the Windows folder are protected.";
-                return false;
+                // Also protect direct Windows directory contents from accidental deletion
+                var winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                if (!string.IsNullOrEmpty(winDir) && normalized.StartsWith(NormalizePath(winDir) + "\\", StringComparison.OrdinalIgnoreCase))
+                {
+                    reason = $"Items inside the Windows folder are protected.";
+                    return false;
+                }
             }
         }
 

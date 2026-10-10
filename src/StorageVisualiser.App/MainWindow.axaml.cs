@@ -178,6 +178,10 @@ public partial class MainWindow : Window
 
     private static readonly string[] HtmlPatterns = ["*.html"];
     private static readonly string[] HtmlMimeTypes = ["text/html"];
+    private static readonly string[] CsvPatterns = ["*.csv"];
+    private static readonly string[] CsvMimeTypes = ["text/csv"];
+    private static readonly string[] JsonPatterns = ["*.json"];
+    private static readonly string[] JsonMimeTypes = ["application/json"];
 
     private async void OnExportReportClicked(object? sender, RoutedEventArgs e)
     {
@@ -205,6 +209,93 @@ public partial class MainWindow : Window
         {
             var localPath = file.Path.LocalPath;
             await _vm.ExportHtmlReportAsync(localPath);
+        }
+    }
+
+    private async void OnExportCsvTopFilesClicked(object? sender, RoutedEventArgs e)
+    {
+        if (_vm.RootNode == null) return;
+
+        var defaultFileName = StorageVisualiser.Core.Export.HtmlReportExporter.GenerateDefaultFileName(_vm.CurrentPath, "csv");
+        var docsFolder = await StorageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export Top Files to CSV",
+            SuggestedFileName = defaultFileName,
+            SuggestedStartLocation = docsFolder,
+            DefaultExtension = "csv",
+            FileTypeChoices =
+            [
+                new FilePickerFileType("CSV Document (*.csv)")
+                {
+                    Patterns = CsvPatterns,
+                    MimeTypes = CsvMimeTypes
+                }
+            ]
+        });
+
+        if (file != null)
+        {
+            var localPath = file.Path.LocalPath;
+            await _vm.ExportCsvTopFilesAsync(localPath);
+        }
+    }
+
+    private async void OnExportCsvFileTypesClicked(object? sender, RoutedEventArgs e)
+    {
+        if (_vm.RootNode == null) return;
+
+        var defaultFileName = StorageVisualiser.Core.Export.HtmlReportExporter.GenerateDefaultFileName(_vm.CurrentPath, "csv");
+        var docsFolder = await StorageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export File Types to CSV",
+            SuggestedFileName = defaultFileName,
+            SuggestedStartLocation = docsFolder,
+            DefaultExtension = "csv",
+            FileTypeChoices =
+            [
+                new FilePickerFileType("CSV Document (*.csv)")
+                {
+                    Patterns = CsvPatterns,
+                    MimeTypes = CsvMimeTypes
+                }
+            ]
+        });
+
+        if (file != null)
+        {
+            var localPath = file.Path.LocalPath;
+            await _vm.ExportCsvFileTypesAsync(localPath);
+        }
+    }
+
+    private async void OnExportJsonClicked(object? sender, RoutedEventArgs e)
+    {
+        if (_vm.RootNode == null) return;
+
+        var defaultFileName = StorageVisualiser.Core.Export.HtmlReportExporter.GenerateDefaultFileName(_vm.CurrentPath, "json");
+        var docsFolder = await StorageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export Scan Data to JSON",
+            SuggestedFileName = defaultFileName,
+            SuggestedStartLocation = docsFolder,
+            DefaultExtension = "json",
+            FileTypeChoices =
+            [
+                new FilePickerFileType("JSON File (*.json)")
+                {
+                    Patterns = JsonPatterns,
+                    MimeTypes = JsonMimeTypes
+                }
+            ]
+        });
+
+        if (file != null)
+        {
+            var localPath = file.Path.LocalPath;
+            await _vm.ExportJsonReportAsync(localPath);
         }
     }
 }

@@ -13,6 +13,7 @@ using StorageVisualiser.Core.Analysis;
 using StorageVisualiser.Core.Export;
 using StorageVisualiser.Core.Formatting;
 using StorageVisualiser.Core.Model;
+using StorageVisualiser.Core.Policy;
 using StorageVisualiser.Core.Scanning;
 using StorageVisualiser.Core.Settings;
 using StorageVisualiser.Core.Treemap;
@@ -29,10 +30,19 @@ public sealed record LegendItem(string Name, string ColorHex);
 public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly SettingsService _settingsService = new();
+    private readonly PolicyService _policyService = new();
     private readonly WindowsAutoScanner _scanner = new();
     private readonly TreemapLayoutEngine _layoutEngine = new();
     private readonly FileActionService _fileActionService;
     private string _lastScanDuration = string.Empty;
+
+    public bool IsPolicyActive => _policyService.IsPolicyLoaded && _policyService.ActivePolicy.IsEnforced;
+    public string PolicyStatusMessage => _policyService.PolicyError != null
+        ? $"Organisation Policy (Fail-Safe Enforced): {_policyService.PolicyError}"
+        : $"Managed by your organisation ({Path.GetFileName(_policyService.LoadedPolicySource ?? "policy.json")})";
+
+    public bool IsDeleteDisabledByPolicy => _policyService.ActivePolicy.DeleteMode == StorageVisualiser.Core.Policy.PolicyDeleteMode.Disabled;
+    public bool IsExportRedactionLockedByPolicy => _policyService.ActivePolicy.RedactPathsInExports.HasValue;
 
     public IReadOnlyList<ColorModeOption> AvailableColorModes { get; } =
     [
@@ -143,6 +153,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _autoRescanAfterDelete = true;
 
+    [ObservableProperty]
+    private bool _redactPathsInExports;
+
     // Settings Dialog Working State
     [ObservableProperty]
     private bool _isSettingsVisible;
@@ -176,6 +189,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private bool _settingsAutoRescanAfterDelete = true;
+
+    [ObservableProperty]
+    private bool _settingsRedactPathsInExports;
 
     [ObservableProperty]
     private bool _canExport;
@@ -418,7 +434,26 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public MainViewModel()
     {
         var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "file_actions.log");
-        _fileActionService = new FileActionService(new WindowsRecycleBinProvider(), logFilePath: logPath);
+        var fileActionPolicy = new FileActionPolicy();
+
+        // Apply Policy to FileActionService
+        if (_policyService.ActivePolicy.DeleteMode.HasValue)
+        {
+            fileActionPolicy.Mode = _policyService.ActivePolicy.DeleteMode.Value switch
+            {
+                PolicyDeleteMode.Disabled => DeleteMode.Disabled,
+                PolicyDeleteMode.AllowPermanent => DeleteMode.AllowPermanent,
+                _ => DeleteMode.RecycleBinOnly
+            };
+        }
+
+        if (_policyService.ActivePolicy.ProtectedPaths != null)
+        {
+            fileActionPolicy.AdditionalProtectedPaths = _policyService.ActivePolicy.ProtectedPaths;
+            fileActionPolicy.ReplaceBuiltInProtectedPaths = _policyService.ActivePolicy.ProtectedPathsMode == ProtectedPathsMode.Replace;
+        }
+
+        _fileActionService = new FileActionService(new WindowsRecycleBinProvider(), fileActionPolicy, logFilePath: logPath);
 
         var s = _settingsService.Current;
         _colorMode = s.ColorMode;
@@ -435,6 +470,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         StorageNode.ShowFreeSpaceInTree = s.ShowFreeSpace;
         _confirmBeforeDelete = s.ConfirmBeforeDelete;
         _autoRescanAfterDelete = s.AutoRescanAfterDelete;
+        _redactPathsInExports = _policyService.ActivePolicy.RedactPathsInExports ?? s.RedactPathsInExports;
 
         Options = (_detailLevel switch
         {
@@ -988,6 +1024,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         SettingsTreePercentageRelativeToTotal = TreePercentageRelativeToTotal;
         SettingsConfirmBeforeDelete = ConfirmBeforeDelete;
         SettingsAutoRescanAfterDelete = AutoRescanAfterDelete;
+        SettingsRedactPathsInExports = RedactPathsInExports;
 
         IsSettingsVisible = true;
     }
@@ -1012,11 +1049,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         SettingsTreePercentageRelativeToTotal = def.TreePercentageRelativeToTotal;
         SettingsConfirmBeforeDelete = def.ConfirmBeforeDelete;
         SettingsAutoRescanAfterDelete = def.AutoRescanAfterDelete;
+        SettingsRedactPathsInExports = _policyService.ActivePolicy.RedactPathsInExports ?? def.RedactPathsInExports;
     }
 
     [RelayCommand]
     public void SaveSettings()
     {
+        var effectiveRedaction = _policyService.ActivePolicy.RedactPathsInExports ?? SettingsRedactPathsInExports;
+
         var updated = new AppSettings
         {
             ColorMode = SelectedColorModeOption?.Value ?? TreemapColorMode.DepthRainbow,
@@ -1028,7 +1068,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             ShowFreeSpace = SettingsShowFreeSpace,
             TreePercentageRelativeToTotal = SettingsTreePercentageRelativeToTotal,
             ConfirmBeforeDelete = SettingsConfirmBeforeDelete,
-            AutoRescanAfterDelete = SettingsAutoRescanAfterDelete
+            AutoRescanAfterDelete = SettingsAutoRescanAfterDelete,
+            RedactPathsInExports = effectiveRedaction
         };
 
         _settingsService.Save(updated);
@@ -1044,6 +1085,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         DetailLevel = updated.DefaultDetailLevel;
         ConfirmBeforeDelete = updated.ConfirmBeforeDelete;
         AutoRescanAfterDelete = updated.AutoRescanAfterDelete;
+        RedactPathsInExports = updated.RedactPathsInExports;
 
         TreePercentageRelativeToTotal = updated.TreePercentageRelativeToTotal;
         TreePercentageRelativeToParent = !updated.TreePercentageRelativeToTotal;
@@ -1147,18 +1189,26 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (RootNode == null) return;
 
+        if (_policyService.ActivePolicy.AllowExports == false)
+        {
+            StatusText = "Exports are disabled by organisation policy.";
+            return;
+        }
+
         try
         {
             StatusText = "Exporting HTML report...";
             var root = RootNode;
             var path = CurrentPath;
             var duration = _lastScanDuration;
+            var redact = RedactPathsInExports;
 
             var html = await Task.Run(() => HtmlReportExporter.ExportToHtml(
                 root,
                 path,
                 scanDuration: duration,
-                maxTreeDepth: 6));
+                maxTreeDepth: 6,
+                redactPaths: redact));
 
             await File.WriteAllTextAsync(targetFilePath, html, System.Text.Encoding.UTF8);
             var fileName = Path.GetFileName(targetFilePath);
@@ -1167,6 +1217,95 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             StatusText = $"Failed to export HTML report: {ex.Message}";
+        }
+    }
+
+    public async Task ExportCsvTopFilesAsync(string targetFilePath)
+    {
+        if (RootNode == null) return;
+
+        if (_policyService.ActivePolicy.AllowExports == false)
+        {
+            StatusText = "Exports are disabled by organisation policy.";
+            return;
+        }
+
+        try
+        {
+            StatusText = "Exporting top files to CSV...";
+            var root = RootNode;
+            var redact = RedactPathsInExports;
+
+            var csv = await Task.Run(() => CsvReportExporter.ExportTopFilesToCsv(root, redactPaths: redact, limit: 1000));
+            await File.WriteAllTextAsync(targetFilePath, csv, System.Text.Encoding.UTF8);
+            var fileName = Path.GetFileName(targetFilePath);
+            StatusText = $"Top files CSV exported successfully: {fileName}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to export CSV: {ex.Message}";
+        }
+    }
+
+    public async Task ExportCsvFileTypesAsync(string targetFilePath)
+    {
+        if (RootNode == null) return;
+
+        if (_policyService.ActivePolicy.AllowExports == false)
+        {
+            StatusText = "Exports are disabled by organisation policy.";
+            return;
+        }
+
+        try
+        {
+            StatusText = "Exporting file types to CSV...";
+            var root = RootNode;
+
+            var csv = await Task.Run(() => CsvReportExporter.ExportFileTypesToCsv(root));
+            await File.WriteAllTextAsync(targetFilePath, csv, System.Text.Encoding.UTF8);
+            var fileName = Path.GetFileName(targetFilePath);
+            StatusText = $"File types CSV exported successfully: {fileName}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to export CSV: {ex.Message}";
+        }
+    }
+
+    public async Task ExportJsonReportAsync(string targetFilePath)
+    {
+        if (RootNode == null) return;
+
+        if (_policyService.ActivePolicy.AllowExports == false)
+        {
+            StatusText = "Exports are disabled by organisation policy.";
+            return;
+        }
+
+        try
+        {
+            StatusText = "Exporting scan data to JSON...";
+            var root = RootNode;
+            var path = CurrentPath;
+            var duration = _lastScanDuration;
+            var redact = RedactPathsInExports;
+
+            var json = await Task.Run(() => JsonReportExporter.ExportToJson(
+                root,
+                path,
+                scanDuration: duration,
+                redactPaths: redact,
+                maxTreeDepth: 6,
+                topFilesLimit: 500));
+
+            await File.WriteAllTextAsync(targetFilePath, json, System.Text.Encoding.UTF8);
+            var fileName = Path.GetFileName(targetFilePath);
+            StatusText = $"JSON report exported successfully: {fileName}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to export JSON report: {ex.Message}";
         }
     }
 

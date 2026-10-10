@@ -29,9 +29,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Full CLI options: `scan <path>`, `--top <n>`, `--json [file|-]`, `--csv [file|-]`, `--html [file]`, `--allocated`, `--unit <windows|iec|si>`, `--threshold-gb <n>`, `--threshold-free-percent <n>`, `--silent`.
   - Machine-readable JSON/CSV output to file or stdout.
   - Exit code contract: `0` (Success / healthy), `1` (Threshold alert triggered), `2` (Scan error or invalid argument).
+- **CSV & JSON Exports with Formula Neutralisation and Path Redaction (Option 2)**:
+  - Added multi-format export dropdown menu on main toolbar: **Interactive HTML Report**, **Top Files to CSV**, **File Types to CSV**, and **Full Scan Data to JSON**.
+  - Formula injection mitigation: escapes cells prefixed with `=`, `+`, `-`, `@`, `\t`, `\r` per security specification (§6.6).
+  - Optional path redaction anonymising user profile paths (`C:\Users\<user>\...`) in HTML reports, CSV spreadsheets, and JSON payloads.
+  - Standardized filename pattern: `Storage Report - <HOSTNAME> - <Target> - <ISO 8601>.<ext>`.
+- **Central IT Organisation Policy Support (`policy.json`)**:
+  - Centralized policy loaded from `%ProgramData%\StorageVisualiser\policy.json` (admin priority) or next to the executable.
+  - Granular governance controls: `deleteMode` (`disabled`, `recycleBinOnly`, `allowPermanent`), `protectedPaths` & `protectedPathsMode` (`append` or `replace`), `allowExports`, `redactPathsInExports`, `allowElevation`, and `allowNetworkPaths`.
+  - Fail-safe enforcement: if `policy.json` is malformed or invalid, the app automatically fails safe to maximum restriction with an informative warning banner.
+  - Visual policy indicators: locked options in Settings dialog display *"Managed by your organisation"*, and blocked actions display policy reasons.
 - **Settings Dialog UI**:
   - Added **⚙️ Settings** button to the main toolbar.
-  - Accessible modal dialog organized into Appearance & Colors, Units & Size Calculation, Treemap Layout & Tree View, and File Actions & Safety.
+  - Accessible modal dialog organized into Appearance & Colors, Units & Size Calculation, Treemap Layout & Tree View, File Actions & Safety, and Reports & Privacy.
   - "Reset to Defaults", "Cancel", and "Save & Apply" controls with live re-rendering.
 
 ## [0.1.1-alpha] - 2026-10-05

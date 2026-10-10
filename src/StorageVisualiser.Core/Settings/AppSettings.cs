@@ -15,4 +15,5 @@ public sealed record AppSettings
     public bool TreePercentageRelativeToTotal { get; init; } = true;
     public bool ConfirmBeforeDelete { get; init; } = true;
     public bool AutoRescanAfterDelete { get; init; } = true;
+    public bool RedactPathsInExports { get; init; }
 }

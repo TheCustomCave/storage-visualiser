@@ -28,14 +28,15 @@ public static class HtmlReportExporter
         StorageNode root,
         string targetPath,
         string scanDuration = "",
-        int maxTreeDepth = 5)
+        int maxTreeDepth = 5,
+        bool redactPaths = false)
     {
         ArgumentNullException.ThrowIfNull(root);
 
         var topFiles = StorageAnalysisEngine.GetTopFiles(root, 200).Select(f => new ExportTopFileDto
         {
             Name = f.Name,
-            FullPath = f.FullPath,
+            FullPath = redactPaths ? ExportSecurityHelper.RedactPath(f.FullPath) : f.FullPath,
             Extension = f.Extension,
             Size = f.Size,
             FormattedSize = f.FormattedSize,
@@ -56,10 +57,16 @@ public static class HtmlReportExporter
             FormattedFileCount = t.FormattedFileCount
         }).ToList();
 
+        var displayTarget = string.IsNullOrWhiteSpace(targetPath) ? root.GetFullPath() : targetPath;
+        if (redactPaths)
+        {
+            displayTarget = ExportSecurityHelper.RedactPath(displayTarget);
+        }
+
         var metadata = new ReportMetadata
         {
             HostName = Environment.MachineName,
-            TargetPath = string.IsNullOrWhiteSpace(targetPath) ? root.GetFullPath() : targetPath,
+            TargetPath = displayTarget,
             GeneratedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
             TotalSizeBytes = root.Size,
             FormattedTotalSize = SizeFormatter.Format(root.Size),
@@ -68,7 +75,7 @@ public static class HtmlReportExporter
             ScanDuration = scanDuration
         };
 
-        var treeDto = BuildExportTree(root, maxTreeDepth, 0);
+        var treeDto = BuildExportTree(root, maxTreeDepth, 0, redactPaths);
 
         var fullData = new FullReportData
         {
@@ -83,11 +90,17 @@ public static class HtmlReportExporter
         return BuildHtmlDocument(metadata, jsonString);
     }
 
-    private static ExportNodeDto BuildExportTree(StorageNode node, int maxDepth, int currentDepth)
+    private static ExportNodeDto BuildExportTree(StorageNode node, int maxDepth, int currentDepth, bool redactPaths)
     {
+        var nodeName = redactPaths && currentDepth == 1 && node.Parent != null &&
+                       (string.Equals(node.Parent.Name, "Users", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(node.Parent.Name, "home", StringComparison.OrdinalIgnoreCase))
+            ? "<user>"
+            : node.Name;
+
         var dto = new ExportNodeDto
         {
-            Name = node.Name,
+            Name = nodeName,
             Size = node.Size,
             Kind = (byte)node.Kind
         };
@@ -118,7 +131,7 @@ public static class HtmlReportExporter
 
                 if (child.Size >= minThreshold)
                 {
-                    dto.Children.Add(BuildExportTree(child, maxDepth, currentDepth + 1));
+                    dto.Children.Add(BuildExportTree(child, maxDepth, currentDepth + 1, redactPaths));
                 }
                 else
                 {
