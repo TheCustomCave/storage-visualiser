@@ -167,14 +167,14 @@ public sealed class TreemapLayoutEngine
 
         while (remainingElements.Count > 0 && remainingRect.Width >= 1 && remainingRect.Height >= 1)
         {
-            var isHorizontal = options.Bias switch
+            var isVerticalColumn = options.Bias switch
             {
-                TreemapBias.Horizontal => true,
-                TreemapBias.Vertical => false,
+                TreemapBias.Horizontal => true,  // Stacking vertically inside columns gives items wider horizontal widths
+                TreemapBias.Vertical => false,   // Placing side-by-side inside rows gives items taller vertical heights
                 _ => remainingRect.Width >= remainingRect.Height
             };
 
-            var shorterEdge = isHorizontal ? remainingRect.Height : remainingRect.Width;
+            var shorterEdge = isVerticalColumn ? remainingRect.Height : remainingRect.Width;
             if (shorterEdge <= 0) break;
 
             var row = new List<(StorageNode? Node, long Size, bool IsOther, int Count)>();
@@ -214,10 +214,10 @@ public sealed class TreemapLayoutEngine
             if (remainingElements.Count == 0)
             {
                 // Snap last row thickness flush to the remaining edge
-                rowThickness = isHorizontal ? remainingRect.Width : remainingRect.Height;
+                rowThickness = isVerticalColumn ? remainingRect.Width : remainingRect.Height;
             }
 
-            if (isHorizontal)
+            if (isVerticalColumn)
             {
                 var rowRect = new LayoutRect(remainingRect.X, remainingRect.Y, rowThickness, remainingRect.Height);
                 var curY = rowRect.Y;

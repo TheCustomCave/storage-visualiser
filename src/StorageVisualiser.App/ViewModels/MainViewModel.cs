@@ -24,6 +24,7 @@ namespace StorageVisualiser.App.ViewModels;
 public sealed record ColorModeOption(TreemapColorMode Value, string DisplayName);
 public sealed record UnitSystemOption(UnitSystem Value, string DisplayName);
 public sealed record LayoutBiasOption(TreemapBias Value, string DisplayName);
+public sealed record LegendItem(string Name, string ColorHex);
 
 public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
@@ -35,7 +36,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public IReadOnlyList<ColorModeOption> AvailableColorModes { get; } =
     [
-        new(TreemapColorMode.DepthRainbow, "Rainbow Depth (SpaceMonger Classic)"),
+        new(TreemapColorMode.DepthRainbow, "Folder Depth (Rainbow)"),
         new(TreemapColorMode.FileTypeCategory, "File Type Category (Media, Code, Docs...)"),
         new(TreemapColorMode.FileAge, "File Age (Recency Tiers)")
     ];
@@ -57,8 +58,75 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private TreemapColorMode _colorMode = TreemapColorMode.DepthRainbow;
 
+    partial void OnColorModeChanged(TreemapColorMode value)
+    {
+        OnPropertyChanged(nameof(IsLegendVisible));
+        OnPropertyChanged(nameof(CurrentLegendItems));
+    }
+
     [ObservableProperty]
     private bool _colorBlindSafe;
+
+    partial void OnColorBlindSafeChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CurrentLegendItems));
+    }
+
+    public bool IsLegendVisible => ColorMode != TreemapColorMode.DepthRainbow;
+
+    public IReadOnlyList<LegendItem> CurrentLegendItems
+    {
+        get
+        {
+            if (ColorMode == TreemapColorMode.FileTypeCategory)
+            {
+                return ColorBlindSafe
+                    ? [
+                        new("Video", "#F3E8FF"),
+                        new("Images", "#CCFBF1"),
+                        new("Audio", "#BAE6FD"),
+                        new("Documents", "#DBEAFE"),
+                        new("Archives", "#FEF3C7"),
+                        new("Binaries", "#FFE4E6"),
+                        new("Disk Images", "#E0E7FF"),
+                        new("Code/Data", "#FEF9C3"),
+                        new("Other", "#E2E8F0")
+                      ]
+                    : [
+                        new("Video", "#DDD6FE"),
+                        new("Images", "#A7F3D0"),
+                        new("Audio", "#A5F3FC"),
+                        new("Documents", "#BFDBFE"),
+                        new("Archives", "#FDE68A"),
+                        new("Binaries", "#FECACA"),
+                        new("Disk Images", "#C7D2FE"),
+                        new("Code/Data", "#99F6E4"),
+                        new("Other", "#CBD5E1")
+                      ];
+            }
+
+            if (ColorMode == TreemapColorMode.FileAge)
+            {
+                return ColorBlindSafe
+                    ? [
+                        new("< 1 mo", "#E0F2FE"),
+                        new("1–6 mo", "#BAE6FD"),
+                        new("6–12 mo", "#FEF3C7"),
+                        new("1–2 yr", "#FDE68A"),
+                        new("> 2 yr", "#CBD5E1")
+                      ]
+                    : [
+                        new("< 1 mo", "#BAE6FD"),
+                        new("1–6 mo", "#BBF7D0"),
+                        new("6–12 mo", "#FEF08A"),
+                        new("1–2 yr", "#FED7AA"),
+                        new("> 2 yr", "#CBD5E1")
+                      ];
+            }
+
+            return [];
+        }
+    }
 
     [ObservableProperty]
     private UnitSystem _unitSystem = UnitSystem.Windows;

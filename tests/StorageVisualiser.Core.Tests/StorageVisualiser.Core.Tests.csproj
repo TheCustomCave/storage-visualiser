@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\StorageVisualiser.Core\StorageVisualiser.Core.csproj" />
     <ProjectReference Include="..\..\src\StorageVisualiser.Windows\StorageVisualiser.Windows.csproj" />
+    <ProjectReference Include="..\..\src\StorageVisualiser.Cli\StorageVisualiser.Cli.csproj" />
   </ItemGroup>
 
   <ItemGroup>

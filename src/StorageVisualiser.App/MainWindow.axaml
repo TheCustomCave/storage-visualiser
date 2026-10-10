@@ -281,27 +281,58 @@
                 </Style>
             </TabControl.Styles>
 
-            <!-- 1. Map Tab (SpaceMonger Nested Treemap) -->
+            <!-- 1. Map Tab (Nested Treemap) -->
             <TabItem Header="🗺️ Map">
-                <controls:TreemapCanvas x:Name="CanvasControl"
-                                        LayoutRoot="{Binding LayoutRoot}"
-                                        SelectedNode="{Binding SelectedNode}"
-                                        ColorMode="{Binding ColorMode}"
-                                        ColorBlindSafe="{Binding ColorBlindSafe}">
-                    <controls:TreemapCanvas.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="🔍 Drill Down into Group" Command="{Binding DrillDownSelectedCommand}" IsVisible="{Binding CanDrillDownSelected}" />
-                            <Separator IsVisible="{Binding CanDrillDownSelected}" />
-                            <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" IsEnabled="{Binding CanOpenInExplorer}" />
-                            <MenuItem Header="Open File / Folder" Command="{Binding OpenFileCommand}" IsEnabled="{Binding CanOpenFile}" />
-                            <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" IsEnabled="{Binding CanCopyPath}" />
-                            <Separator />
-                            <MenuItem Header="Delete to Recycle Bin..." Command="{Binding RequestDeleteCommand}" IsEnabled="{Binding CanDelete}" InputGesture="Delete" />
-                            <Separator />
-                            <MenuItem Header="Properties" Command="{Binding ShowPropertiesCommand}" IsEnabled="{Binding CanShowProperties}" />
-                        </ContextMenu>
-                    </controls:TreemapCanvas.ContextMenu>
-                </controls:TreemapCanvas>
+                <Grid RowDefinitions="Auto,*">
+                    <!-- Color Legend Strip (Visible in File Type and File Age color modes) -->
+                    <Border Grid.Row="0"
+                            Background="#F9FAFB"
+                            BorderBrush="#E5E7EB"
+                            BorderThickness="0,0,0,1"
+                            Padding="12,5"
+                            IsVisible="{Binding IsLegendVisible}">
+                        <ItemsControl ItemsSource="{Binding CurrentLegendItems}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,16,2" VerticalAlignment="Center">
+                                        <Border Width="13" Height="13"
+                                                CornerRadius="2"
+                                                Background="{Binding ColorHex}"
+                                                BorderBrush="#9CA3AF"
+                                                BorderThickness="1" />
+                                        <TextBlock Text="{Binding Name}" FontSize="11" Foreground="#374151" FontWeight="Medium" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+
+                    <controls:TreemapCanvas Grid.Row="1"
+                                            x:Name="CanvasControl"
+                                            LayoutRoot="{Binding LayoutRoot}"
+                                            SelectedNode="{Binding SelectedNode}"
+                                            ColorMode="{Binding ColorMode}"
+                                            ColorBlindSafe="{Binding ColorBlindSafe}">
+                        <controls:TreemapCanvas.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="🔍 Drill Down into Group" Command="{Binding DrillDownSelectedCommand}" IsVisible="{Binding CanDrillDownSelected}" />
+                                <Separator IsVisible="{Binding CanDrillDownSelected}" />
+                                <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" IsEnabled="{Binding CanOpenInExplorer}" />
+                                <MenuItem Header="Open File / Folder" Command="{Binding OpenFileCommand}" IsEnabled="{Binding CanOpenFile}" />
+                                <MenuItem Header="Copy Full Path" Click="OnCopyPathClicked" IsEnabled="{Binding CanCopyPath}" />
+                                <Separator />
+                                <MenuItem Header="Delete to Recycle Bin..." Command="{Binding RequestDeleteCommand}" IsEnabled="{Binding CanDelete}" InputGesture="Delete" />
+                                <Separator />
+                                <MenuItem Header="Properties" Command="{Binding ShowPropertiesCommand}" IsEnabled="{Binding CanShowProperties}" />
+                            </ContextMenu>
+                        </controls:TreemapCanvas.ContextMenu>
+                    </controls:TreemapCanvas>
+                </Grid>
             </TabItem>
 
             <!-- 2. Tree Tab (RidNacs Style) -->

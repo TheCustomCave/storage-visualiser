@@ -123,6 +123,28 @@ public class TreemapLayoutEngineTests
     }
 
     [Fact]
+    public void Treemap_Layout_Bias_HorizontalProducesWiderBoxes_VerticalProducesTallerBoxes()
+    {
+        var root = new StorageNode { Name = "Root", Kind = StorageItemKind.Directory, Size = 1000 };
+        root.AddChild(new StorageNode { Name = "A.bin", Kind = StorageItemKind.File, Size = 500 });
+        root.AddChild(new StorageNode { Name = "B.bin", Kind = StorageItemKind.File, Size = 500 });
+
+        var engine = new TreemapLayoutEngine();
+        var bounds = new LayoutRect(0, 0, 1000, 1000);
+
+        var horizLayout = engine.ComputeLayout(root, bounds, new TreemapOptions { Bias = TreemapBias.Horizontal });
+        var vertLayout = engine.ComputeLayout(root, bounds, new TreemapOptions { Bias = TreemapBias.Vertical });
+
+        // Horizontal bias creates horizontal row slices (width > height)
+        var horizChild = horizLayout.Children[0];
+        horizChild.Bounds.Width.ShouldBeGreaterThan(horizChild.Bounds.Height);
+
+        // Vertical bias creates vertical column slices (height > width)
+        var vertChild = vertLayout.Children[0];
+        vertChild.Bounds.Height.ShouldBeGreaterThan(vertChild.Bounds.Width);
+    }
+
+    [Fact]
     public void Treemap_Layout_GroupsSmallItemsIntoOther()
     {
         var root = new StorageNode { Name = "Root", Kind = StorageItemKind.Directory, Size = 10000 };

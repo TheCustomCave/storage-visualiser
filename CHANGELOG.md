@@ -13,16 +13,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Built strictly for Native AOT compatibility using `System.Text.Json` source generator (`SettingsJsonContext`).
   - Added fail-safe fallback to defaults if `settings.json` is missing or corrupted.
 - **Treemap Color Themes & Accessible Palettes**:
-  - **Rainbow Depth (SpaceMonger Classic)**: SpaceMonger 7-level folder depth rainbow with peach file fills.
-  - **File Type Category**: Pastel category coloring across media, archives, code, documents, binaries, and system files.
+  - **Folder Depth (Rainbow)**: Depth-based rainbow coloring with peach file fills.
+  - **File Type Category**: Category coloring across media, archives, code, documents, binaries, and system files.
   - **File Age**: Multi-tier recency coloring (<1mo, 1-6mo, 6-12mo, 1-2yr, >2yr cold/archived).
-  - **Color-Blind Safe Mode**: Full high-contrast Okabe-Ito / Tol palette mapping across all three color modes.
+  - **Color-Blind Safe Mode**: Full high-contrast Okabe-Ito / Tol palette mapping across all color modes.
+  - **Interactive Color Legend Strip**: Visible category and age swatches directly above the Treemap canvas with real-time palette synchronization.
 - **Size Unit Systems & Metrics**:
   - Support for **Windows Binary** (1024 base: KB, MB, GB), **IEC Standard** (1024 base: KiB, MiB, GiB), and **Metric / SI** (1000 base: kB, MB, GB).
   - Configurable default unit system in `SizeFormatter` dynamically updating Treemap labels, Tree view, Top Files, and drive info.
   - Support for Allocated Size on disk vs Logical File Size in Treemap sizing.
 - **Treemap Layout Bias**:
-  - Aspect ratio bias options: Balanced (Squarified), Favor Horizontal (Wider Boxes), and Favor Vertical (Taller Boxes).
+  - Aspect ratio bias options: Balanced (Squarified), Favor Horizontal (Wider Boxes), and Favor Vertical (Taller Boxes), with correct slice orientation.
+- **Headless CLI (`StorageVisualiser.Cli`) for RMM & Automation**:
+  - Standalone single-file Native AOT CLI binary for headless scans and remote management tools.
+  - Full CLI options: `scan <path>`, `--top <n>`, `--json [file|-]`, `--csv [file|-]`, `--html [file]`, `--allocated`, `--unit <windows|iec|si>`, `--threshold-gb <n>`, `--threshold-free-percent <n>`, `--silent`.
+  - Machine-readable JSON/CSV output to file or stdout.
+  - Exit code contract: `0` (Success / healthy), `1` (Threshold alert triggered), `2` (Scan error or invalid argument).
 - **Settings Dialog UI**:
   - Added **⚙️ Settings** button to the main toolbar.
   - Accessible modal dialog organized into Appearance & Colors, Units & Size Calculation, Treemap Layout & Tree View, and File Actions & Safety.
